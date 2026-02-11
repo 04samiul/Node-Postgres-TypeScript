@@ -52,6 +52,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+transporter.verify().then(() => {
+  console.log("SMTP email service connected successfully");
+}).catch((err) => {
+  console.error("SMTP email service error:", err.message);
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -261,7 +267,8 @@ export async function registerRoutes(
     try {
       const { name, email, subject, message } = req.body;
       await transporter.sendMail({
-        from: `"${name}" <${email}>`,
+        from: `"Crack-CU Contact" <${process.env.SMTP_USER}>`,
+        replyTo: `"${name}" <${email}>`,
         to: process.env.SMTP_USER || "crackcu.info@gmail.com",
         subject: subject || "Contact Form Message",
         html: `<h3>New Contact Form Message</h3><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Subject:</strong> ${subject || "N/A"}</p><p><strong>Message:</strong></p><p>${message}</p>`,
