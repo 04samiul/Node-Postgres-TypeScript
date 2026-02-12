@@ -19,7 +19,9 @@ import {
   Calendar,
   Image as ImageIcon,
   Video,
+  ExternalLink,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { Course, MockTest, Class, Resource, Notice, HeroBanner } from "@shared/schema";
 import { useState, useEffect, useCallback } from "react";
 import { useSEO } from "@/hooks/use-seo";
@@ -517,6 +519,7 @@ function NoticesSection() {
   const { data: noticeItems, isLoading } = useQuery<Notice[]>({
     queryKey: ["/api/notices", "?limit=3"],
   });
+  const [detailNotice, setDetailNotice] = useState<Notice | null>(null);
 
   return (
     <motion.section
@@ -562,12 +565,53 @@ function NoticesSection() {
                   {notice.description}
                 </p>
               </CardContent>
+              <CardFooter className="gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => setDetailNotice(notice)} data-testid={`button-notice-read-more-${notice.id}`}>
+                  <BookOpen className="h-3.5 w-3.5 mr-1" />
+                  Read More
+                </Button>
+                {notice.url && (
+                  <a href={notice.url} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="outline" data-testid={`button-notice-visit-${notice.id}`}>
+                      <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                      Visit Link
+                    </Button>
+                  </a>
+                )}
+              </CardFooter>
             </Card>
           ))}
         </div>
       ) : (
         <p className="text-muted-foreground text-sm" data-testid="text-notices-empty">No notices available yet.</p>
       )}
+
+      <Dialog open={!!detailNotice} onOpenChange={(open) => !open && setDetailNotice(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle data-testid="text-detail-notice-title">{detailNotice?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary">{detailNotice?.tag}</Badge>
+              <span className="text-sm text-muted-foreground">
+                {detailNotice?.createdAt && format(new Date(detailNotice.createdAt), "MMM dd, yyyy")}
+              </span>
+            </div>
+            <DialogDescription className="text-sm whitespace-pre-wrap" data-testid="text-detail-notice-desc">
+              {detailNotice?.description}
+            </DialogDescription>
+            {detailNotice?.url && (
+              <a href={detailNotice.url} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" data-testid="button-detail-notice-visit">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Visit Link
+                </Button>
+              </a>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.section>
   );
 }
