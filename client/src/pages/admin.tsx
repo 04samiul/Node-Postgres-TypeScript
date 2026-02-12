@@ -40,6 +40,7 @@ import {
   CheckCircle,
   XCircle,
   Download,
+  KeyRound,
 } from "lucide-react";
 import type { User, Course, MockTest, Class, Resource, Notice, TeamMember, HeroBanner } from "@shared/schema";
 import { MOCK_TAGS, CLASS_TAGS, RESOURCE_TAGS, ACCESS_LEVELS, USER_ROLES, NOTICE_TAGS } from "@shared/schema";
@@ -129,6 +130,9 @@ function UsersTab() {
   const { toast } = useToast();
   const [expandedUser, setExpandedUser] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<number | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const updateRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
@@ -160,6 +164,20 @@ function UsersTab() {
     },
   });
 
+  const resetPassword = useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: number; newPassword: string }) => {
+      await apiRequest("POST", `/api/admin/users/${userId}/reset-password`, { newPassword });
+    },
+    onSuccess: () => {
+      toast({ title: "Password reset successfully" });
+      setResetPasswordUserId(null);
+      setNewPassword("");
+      setShowPassword(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
+    },
+  });
 
   if (isLoading) return <Skeleton className="h-48 w-full" />;
 
@@ -277,6 +295,54 @@ function UsersTab() {
                     <p className="text-xs text-muted-foreground">Registered</p>
                     <p className="font-medium">{u.createdAt ? format(new Date(u.createdAt), "PPp") : "N/A"}</p>
                   </div>
+                </div>
+                <div className="pt-3 border-t">
+                  {resetPasswordUserId === u.id ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="relative flex-1 min-w-[200px]">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="New password (min 6 chars)"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          data-testid={`input-reset-password-${u.id}`}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="absolute right-0 top-0"
+                          onClick={() => setShowPassword(!showPassword)}
+                          data-testid={`button-toggle-password-${u.id}`}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <Button
+                        variant="default"
+                        disabled={resetPassword.isPending || newPassword.length < 6}
+                        onClick={() => resetPassword.mutate({ userId: u.id, newPassword })}
+                        data-testid={`button-confirm-reset-${u.id}`}
+                      >
+                        {resetPassword.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reset"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => { setResetPasswordUserId(null); setNewPassword(""); setShowPassword(false); }}
+                        data-testid={`button-cancel-reset-${u.id}`}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => setResetPasswordUserId(u.id)}
+                      data-testid={`button-reset-password-${u.id}`}
+                    >
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      Reset Password
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

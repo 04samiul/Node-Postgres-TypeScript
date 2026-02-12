@@ -660,6 +660,22 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/users/:id/reset-password", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { newPassword } = req.body;
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const updated = await storage.updateUser(id, { password: hashedPassword });
+      if (!updated) return res.status(404).json({ message: "User not found" });
+      res.json({ message: "Password reset successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/admin/timer-rules", requireAdmin, async (_req, res) => {
     try {
       const setting = await storage.getSetting("timer_rules");
