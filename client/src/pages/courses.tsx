@@ -25,6 +25,8 @@ export default function CoursesPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
+  const [detailCourse, setDetailCourse] = useState<Course | null>(null);
+
   const { data: enrollments } = useQuery<Enrollment[]>({
     queryKey: ["/api/my-enrollments"],
     enabled: !!user,
@@ -130,7 +132,7 @@ export default function CoursesPage() {
                   )}
                 </CardContent>
                 <CardFooter className="gap-2 flex-wrap">
-                  <Button variant="outline" size="sm" data-testid={`button-course-more-${course.id}`}>
+                  <Button variant="outline" size="sm" onClick={() => setDetailCourse(course)} data-testid={`button-course-more-${course.id}`}>
                     <BookOpen className="h-3.5 w-3.5 mr-1" />
                     More
                   </Button>
@@ -177,6 +179,50 @@ export default function CoursesPage() {
           <p className="text-muted-foreground">No courses available yet.</p>
         </div>
       )}
+
+      <Dialog open={!!detailCourse} onOpenChange={(open) => !open && setDetailCourse(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle data-testid="text-detail-course-title">{detailCourse?.title}</DialogTitle>
+          </DialogHeader>
+          {detailCourse?.bannerImage && (
+            <div className="rounded-md overflow-hidden">
+              <img
+                src={detailCourse.bannerImage}
+                alt={detailCourse.title}
+                className="w-full aspect-video object-cover"
+                data-testid="img-detail-course"
+              />
+            </div>
+          )}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              {detailCourse?.price === 0 ? (
+                <Badge variant="outline">Free</Badge>
+              ) : (
+                <div className="flex items-center gap-1">
+                  {detailCourse?.offerPrice != null && detailCourse.offerPrice < (detailCourse?.price ?? 0) && (
+                    <span className="text-sm text-muted-foreground line-through">BDT {detailCourse?.price}</span>
+                  )}
+                  <Badge>
+                    BDT {detailCourse?.offerPrice != null && detailCourse.offerPrice < (detailCourse?.price ?? 0) ? detailCourse.offerPrice : detailCourse?.price}
+                  </Badge>
+                </div>
+              )}
+              {detailCourse?.access === "paid" && <Badge variant="secondary">Premium</Badge>}
+            </div>
+            {detailCourse?.lastDate && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>Last Date: {format(new Date(detailCourse.lastDate), "MMM dd, yyyy")}</span>
+              </div>
+            )}
+            <DialogDescription className="text-sm whitespace-pre-wrap" data-testid="text-detail-course-desc">
+              {detailCourse?.description}
+            </DialogDescription>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent>

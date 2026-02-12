@@ -284,15 +284,17 @@ function CoursesSection() {
                 </p>
               </CardContent>
               <CardFooter className="gap-2 flex-wrap">
-                <Link href={`/courses/${course.id}`}>
+                <Link href="/courses">
                   <Button variant="outline" size="sm" data-testid={`button-course-more-${course.id}`}>
                     <BookOpen className="h-3.5 w-3.5 mr-1" />
                     More
                   </Button>
                 </Link>
-                <Button size="sm" data-testid={`button-course-enroll-${course.id}`}>
-                  Enroll
-                </Button>
+                <Link href="/auth">
+                  <Button size="sm" data-testid={`button-course-enroll-${course.id}`}>
+                    Enroll
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
           ))}
