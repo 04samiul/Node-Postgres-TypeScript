@@ -46,6 +46,6 @@ integrations = ["javascript_auth_all_persistance:1.0.0", "javascript_database:1.
 [userenv.shared]
 SMTP_USER = "crackcu.info@gmail.com"
 SMTP_PASS = "nuon lxjf ntvm ylin"
-SUPABASE_URL = "https://jwdidgjutflkatfsepmk.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3ZGlkZ2p1dGZsa2F0ZnNlcG1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NDY5NzIsImV4cCI6MjA4NjIyMjk3Mn0.Tr0sOZGVl2J3ZYDY3L-1KQh932FcBmjBdmH24LLK2B8"
+SUPABASE_URL = "postgresql://postgres.vvtddseqvoyswkpiydal:01878438104admin@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2dGRkc2Vxdm95c3drcGl5ZGFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyMjg4NTAsImV4cCI6MjA4NjgwNDg1MH0.nHKBpYEcIdAb2T8uCe_5uTn_2VpnfJVEKBQhbw9uzw4"
 SUPABASE_BUCKET = "Uploads"
