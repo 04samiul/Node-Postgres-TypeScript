@@ -4,7 +4,7 @@ import { Express } from "express";
 
 const PgStore = connectPgSimple(session);
 
-const databaseUrl = process.env.SUPABASE_DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
 
 export function setupAuth(app: Express) {
   app.use(
