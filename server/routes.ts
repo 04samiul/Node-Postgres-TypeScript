@@ -4,7 +4,6 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
-import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
@@ -69,7 +68,6 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   setupAuth(app);
-  registerObjectStorageRoutes(app);
 
   // ======= AUTH ROUTES =======
   app.post("/api/register", async (req, res) => {
