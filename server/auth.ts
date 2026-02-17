@@ -1,18 +1,29 @@
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { Express } from "express";
+import { pool } from "./db";
 
 const PgStore = connectPgSimple(session);
 
-const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
+const databaseUrl = process.env.SUPABASE_URL;
 
 export function setupAuth(app: Express) {
   app.use(
     session({
       store: new PgStore({
-        conString: databaseUrl,
+        pool: pool,
         createTableIfMissing: true,
-      }),
+        schemaName: 'public',
+        tableName: 'session',
+        errorLog: (err) => {
+          // Filter out SSL certificate warnings in the logs
+          if (err.code !== 'SELF_SIGNED_CERT_IN_CHAIN' && err.message !== 'self-signed certificate in certificate chain') {
+            console.error('Session Store Error:', err);
+          }
+        },
+        // Using pool instead of conString to share the SSL-configured connection
+        pruneSessionInterval: 60 * 15 // 15 minutes
+      } as any),
       secret: process.env.SESSION_SECRET!,
       resave: false,
       saveUninitialized: false,

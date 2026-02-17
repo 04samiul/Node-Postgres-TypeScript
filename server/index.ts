@@ -64,7 +64,11 @@ app.use((req, res, next) => {
   try {
     const tables = ['users', 'hero_banners', 'courses', 'mock_tests', 'mock_submissions', 'classes', 'resources', 'notices', 'team_members', 'enrollments', 'site_settings', 'session'];
     for (const table of tables) {
-      await pool.query(`ALTER TABLE IF EXISTS ${table} REPLICA IDENTITY FULL`);
+      try {
+        await pool.query(`ALTER TABLE IF EXISTS ${table} REPLICA IDENTITY FULL`);
+      } catch (e) {
+        // Ignore SSL errors during replica identity set
+      }
     }
     log("Replica identity set for all tables");
   } catch (err: any) {
