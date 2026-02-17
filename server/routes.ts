@@ -23,15 +23,24 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-function generateUsername(hscGroup: string, hscYear: string, hscRoll: string): string {
-  const groupLetter = hscGroup === "Business Studies" ? "B" : hscGroup === "Science" ? "S" : "H";
+function generateUsername(
+  hscGroup: string,
+  hscYear: string,
+  hscRoll: string,
+): string {
+  const groupLetter =
+    hscGroup === "Business Studies" ? "B" : hscGroup === "Science" ? "S" : "H";
   const yearSuffix = hscYear.slice(-2);
   return `${groupLetter}${yearSuffix}${hscRoll}`;
 }
 
 function parseBDTime(dateStr: string): Date | null {
   if (!dateStr) return null;
-  if (dateStr.includes("T") && !dateStr.includes("+") && !dateStr.includes("Z")) {
+  if (
+    dateStr.includes("T") &&
+    !dateStr.includes("+") &&
+    !dateStr.includes("Z")
+  ) {
     const utcDate = new Date(dateStr + "+06:00");
     return isNaN(utcDate.getTime()) ? null : utcDate;
   }
@@ -40,7 +49,11 @@ function parseBDTime(dateStr: string): Date | null {
 }
 
 function formatBDTime(date: Date): string {
-  return date.toLocaleString("en-US", { timeZone: "Asia/Dhaka", dateStyle: "medium", timeStyle: "short" });
+  return date.toLocaleString("en-US", {
+    timeZone: "Asia/Dhaka",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
 
 const transporter = nodemailer.createTransport({
@@ -57,36 +70,73 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-transporter.verify().then(() => {
-  console.log("SMTP email service connected successfully");
-}).catch((err) => {
-  console.error("SMTP email service error:", err.message);
-});
+transporter
+  .verify()
+  .then(() => {
+    console.log("SMTP email service connected successfully");
+  })
+  .catch((err) => {
+    console.error("SMTP email service error:", err.message);
+  });
 
 export async function registerRoutes(
   httpServer: Server,
-  app: Express
+  app: Express,
 ): Promise<Server> {
   setupAuth(app);
 
   // ======= AUTH ROUTES =======
   app.post("/api/register", async (req, res) => {
     try {
-      const { fullName, whatsapp, email, hscRoll, hscReg, hscYear, hscGroup, hscBoard, sscRoll, sscReg, sscYear, sscGroup, sscBoard, password } = req.body;
+      const {
+        fullName,
+        whatsapp,
+        email,
+        hscRoll,
+        hscReg,
+        hscYear,
+        hscGroup,
+        hscBoard,
+        sscRoll,
+        sscReg,
+        sscYear,
+        sscGroup,
+        sscBoard,
+        password,
+      } = req.body;
 
-      if (!fullName || !whatsapp || !email || !hscRoll || !hscReg || !hscYear || !hscGroup || !hscBoard || !sscRoll || !sscReg || !sscYear || !sscGroup || !sscBoard || !password) {
+      if (
+        !fullName ||
+        !whatsapp ||
+        !email ||
+        !hscRoll ||
+        !hscReg ||
+        !hscYear ||
+        !hscGroup ||
+        !hscBoard ||
+        !sscRoll ||
+        !sscReg ||
+        !sscYear ||
+        !sscGroup ||
+        !sscBoard ||
+        !password
+      ) {
         return res.status(400).json({ message: "All fields are required" });
       }
 
       const existingWhatsapp = await storage.getUserByWhatsapp(whatsapp);
       if (existingWhatsapp) {
-        return res.status(400).json({ message: "WhatsApp number already registered" });
+        return res
+          .status(400)
+          .json({ message: "WhatsApp number already registered" });
       }
 
       const username = generateUsername(hscGroup, hscYear, hscRoll);
       const existingUsername = await storage.getUserByUsername(username);
       if (existingUsername) {
-        return res.status(400).json({ message: "An account with these HSC credentials already exists" });
+        return res.status(400).json({
+          message: "An account with these HSC credentials already exists",
+        });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -95,7 +145,11 @@ export async function registerRoutes(
       let isRestricted = false;
       try {
         const timerSetting = await storage.getSetting("timer_rules");
-        const rules: Array<{ hscYear: string; sscYear: string; status: string }> = (timerSetting?.value as any) || [];
+        const rules: Array<{
+          hscYear: string;
+          sscYear: string;
+          status: string;
+        }> = (timerSetting?.value as any) || [];
         let bestMatch: { specificity: number; status: string } | null = null;
         for (const rule of rules) {
           if (!rule.hscYear && !rule.sscYear) continue;
@@ -146,12 +200,12 @@ export async function registerRoutes(
               <p style="font-size: 16px;">Hi! <strong>${fullName}</strong>,</p>
               <p>Your registration on <strong>Crack-CU</strong> is complete.</p>
               <p>Here are your account details:</p>
-              <p><strong>Username:</strong> <strong>${username}</strong></p>
+              <p><strong>Username:</strong> <strong  style="color: #eb202a;">${username}</strong></p>
               <p><strong>You're:</strong> <strong>${isSecondTimer ? "2nd Timer" : "1st Timer"}</strong></p>
               <p>Please save this information for future access.</p>
               <br/>
               <p>If you face any issues, contact us via WhatsApp.</p>
-              <p>WhatsApp: <a href="https://wa.me/8801522132809" style="color: #eb202a;">+8801522132809</a></p>
+              <p>WhatsApp: <a href="https://wa.me/8801522132809" style="color: #eb202a; font-weight: bold;">+8801522132809</a></p>
               <br/>
               <p>We're ready when you are.</p>
               <br/>
@@ -187,7 +241,9 @@ export async function registerRoutes(
       }
 
       if (user.isRestricted) {
-        return res.status(403).json({ message: "Your account has been restricted. Contact support." });
+        return res.status(403).json({
+          message: "Your account has been restricted. Contact support.",
+        });
       }
 
       const valid = await bcrypt.compare(password, user.password);
@@ -289,15 +345,20 @@ export async function registerRoutes(
     try {
       const id = parseInt(req.params.id);
       const test = await storage.getMockTest(id);
-      if (!test || !test.isVisible) return res.status(404).json({ message: "Mock test not found" });
+      if (!test || !test.isVisible)
+        return res.status(404).json({ message: "Mock test not found" });
       const publishDate = new Date(test.publishTime);
       if (publishDate.getTime() > Date.now()) {
-        return res.status(403).json({ message: "This mock test hasn't started yet" });
+        return res
+          .status(403)
+          .json({ message: "This mock test hasn't started yet" });
       }
       if (test.access === "paid") {
         const user = await storage.getUser(req.session.userId!);
         if (!user?.isPremium) {
-          return res.status(403).json({ message: "This is a premium mock test. Upgrade to access it." });
+          return res.status(403).json({
+            message: "This is a premium mock test. Upgrade to access it.",
+          });
         }
       }
       res.json(test);
@@ -309,42 +370,64 @@ export async function registerRoutes(
   app.get("/api/my-submissions", requireAuth, async (req, res) => {
     const submissions = await storage.getUserSubmissions(req.session.userId!);
     const allTests = await storage.getAllMockTests();
-    const testMap = new Map(allTests.map(t => [t.id, t.title]));
-    const enriched = submissions.map(s => ({
+    const testMap = new Map(allTests.map((t) => [t.id, t.title]));
+    const enriched = submissions.map((s) => ({
       ...s,
       mockTestTitle: testMap.get(s.mockTestId) || `Mock #${s.mockTestId}`,
     }));
     res.json(enriched);
   });
 
-  app.get("/api/my-submissions/:submissionId/review", requireAuth, async (req, res) => {
-    try {
-      const submissionId = parseInt(req.params.submissionId);
-      const submissions = await storage.getUserSubmissions(req.session.userId!);
-      const submission = submissions.find(s => s.id === submissionId);
-      if (!submission) return res.status(404).json({ message: "Submission not found" });
-      if (!submission.isSubmitted) return res.status(400).json({ message: "Submission not yet completed" });
+  app.get(
+    "/api/my-submissions/:submissionId/review",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const submissionId = parseInt(req.params.submissionId);
+        const submissions = await storage.getUserSubmissions(
+          req.session.userId!,
+        );
+        const submission = submissions.find((s) => s.id === submissionId);
+        if (!submission)
+          return res.status(404).json({ message: "Submission not found" });
+        if (!submission.isSubmitted)
+          return res
+            .status(400)
+            .json({ message: "Submission not yet completed" });
 
-      const test = await storage.getMockTest(submission.mockTestId);
-      if (!test) return res.status(404).json({ message: "Mock test not found" });
+        const test = await storage.getMockTest(submission.mockTestId);
+        if (!test)
+          return res.status(404).json({ message: "Mock test not found" });
 
-      res.json({
-        submission,
-        mockTest: {
-          id: test.id,
-          title: test.title,
-          questions: test.questions,
-        },
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+        res.json({
+          submission,
+          mockTest: {
+            id: test.id,
+            title: test.title,
+            questions: test.questions,
+          },
+        });
+      } catch (error: any) {
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
 
   app.patch("/api/profile", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      const { fullName, email, hscRoll, hscReg, hscGroup, hscBoard, sscRoll, sscReg, sscGroup, sscBoard } = req.body;
+      const {
+        fullName,
+        email,
+        hscRoll,
+        hscReg,
+        hscGroup,
+        hscBoard,
+        sscRoll,
+        sscReg,
+        sscGroup,
+        sscBoard,
+      } = req.body;
       const updateData: any = {};
       if (fullName !== undefined) updateData.fullName = fullName;
       if (email !== undefined) updateData.email = email;
@@ -371,7 +454,9 @@ export async function registerRoutes(
   });
 
   app.get("/api/my-enrollments", requireAuth, async (req, res) => {
-    const enrollmentList = await storage.getUserEnrollments(req.session.userId!);
+    const enrollmentList = await storage.getUserEnrollments(
+      req.session.userId!,
+    );
     const allCourses = await storage.getAllCourses();
     const enriched = enrollmentList.map((e) => {
       const course = allCourses.find((c) => c.id === e.courseId);
@@ -388,18 +473,34 @@ export async function registerRoutes(
       if (course.access === "paid") {
         const user = await storage.getUser(req.session.userId!);
         if (!user?.isPremium) {
-          return res.status(403).json({ message: "This is a premium course. Upgrade to access it." });
+          return res.status(403).json({
+            message: "This is a premium course. Upgrade to access it.",
+          });
         }
       }
-      const existing = await storage.getEnrollment(req.session.userId!, courseId);
+      const existing = await storage.getEnrollment(
+        req.session.userId!,
+        courseId,
+      );
       if (existing && existing.status !== "declined") {
-        return res.status(400).json({ message: existing.status === "approved" ? "Already enrolled" : "Enrollment request already pending" });
+        return res.status(400).json({
+          message:
+            existing.status === "approved"
+              ? "Already enrolled"
+              : "Enrollment request already pending",
+        });
       }
       let enrollment;
       if (existing && existing.status === "declined") {
-        enrollment = await storage.updateEnrollment(existing.id, { status: "pending" });
+        enrollment = await storage.updateEnrollment(existing.id, {
+          status: "pending",
+        });
       } else {
-        enrollment = await storage.createEnrollment({ userId: req.session.userId!, courseId, status: "pending" });
+        enrollment = await storage.createEnrollment({
+          userId: req.session.userId!,
+          courseId,
+          status: "pending",
+        });
       }
 
       const user = await storage.getUser(req.session.userId!);
@@ -431,12 +532,15 @@ export async function registerRoutes(
                   <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>SSC Board</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.sscBoard}</td></tr>
                 </table>
                 <br/>
-                <p><strong>User WhatsApp Number:</strong> <a href="https://wa.me/${user.whatsapp?.replace(/\D/g, '')}">${user.whatsapp}</a></p>
+                <p><strong>User WhatsApp Number:</strong> <a href="https://wa.me/${user.whatsapp?.replace(/\D/g, "")}">${user.whatsapp}</a></p>
               </div>
             `,
           });
         } catch (emailErr) {
-          console.error("Failed to send enrollment notification email:", emailErr);
+          console.error(
+            "Failed to send enrollment notification email:",
+            emailErr,
+          );
         }
       }
 
@@ -458,17 +562,28 @@ export async function registerRoutes(
       }
 
       const test = await storage.getMockTest(mockTestId);
-      if (!test) return res.status(404).json({ message: "Mock test not found" });
+      if (!test)
+        return res.status(404).json({ message: "Mock test not found" });
 
-      const questions = Array.isArray(test.questions) ? test.questions as any[] : [];
+      const questions = Array.isArray(test.questions)
+        ? (test.questions as any[])
+        : [];
       if (questions.length === 0) {
-        return res.status(400).json({ message: "This mock test has no questions" });
+        return res
+          .status(400)
+          .json({ message: "This mock test has no questions" });
       }
 
       const validSections = ["EngP", "EngO", "AS", "PS"];
       for (const [qId, ans] of Object.entries(answers)) {
-        if (ans !== null && ans !== -1 && (typeof ans !== "number" || ans < 0 || ans > 3)) {
-          return res.status(400).json({ message: `Invalid answer for question ${qId}` });
+        if (
+          ans !== null &&
+          ans !== -1 &&
+          (typeof ans !== "number" || ans < 0 || ans > 3)
+        ) {
+          return res
+            .status(400)
+            .json({ message: `Invalid answer for question ${qId}` });
         }
       }
 
@@ -476,7 +591,9 @@ export async function registerRoutes(
       const isSecondTimer = submittingUser?.isSecondTimer ?? false;
 
       const existingSubs = await storage.getUserSubmissions(userId);
-      const prevSubmissions = existingSubs.filter(s => s.mockTestId === mockTestId && s.isSubmitted);
+      const prevSubmissions = existingSubs.filter(
+        (s) => s.mockTestId === mockTestId && s.isSubmitted,
+      );
       const attemptNumber = prevSubmissions.length + 1;
 
       // Grading rules:
@@ -487,14 +604,20 @@ export async function registerRoutes(
       // Overall pass: 40
       // 2nd timer penalty: -3 (based on user's isSecondTimer flag)
 
-      const markingRules: Record<string, { correct: number; wrong: number; pass: number }> = {
+      const markingRules: Record<
+        string,
+        { correct: number; wrong: number; pass: number }
+      > = {
         EngP: { correct: 2, wrong: -0.5, pass: 13 },
         EngO: { correct: 1, wrong: -0.25, pass: 0 },
         AS: { correct: 2, wrong: -0.5, pass: 10 },
         PS: { correct: 2, wrong: -0.5, pass: 10 },
       };
 
-      let engPMarks = 0, engOMarks = 0, asMarks = 0, psMarks = 0;
+      let engPMarks = 0,
+        engOMarks = 0,
+        asMarks = 0,
+        psMarks = 0;
 
       for (const q of questions) {
         const userAnswer = answers[String(q.id)];
@@ -502,7 +625,11 @@ export async function registerRoutes(
         const rules = markingRules[section];
         if (!rules) continue;
 
-        if (userAnswer === undefined || userAnswer === null || userAnswer === -1) {
+        if (
+          userAnswer === undefined ||
+          userAnswer === null ||
+          userAnswer === -1
+        ) {
           continue;
         }
 
@@ -603,7 +730,8 @@ export async function registerRoutes(
   app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { role, isPremium, isRestricted, isSecondTimer, hscYear, sscYear } = req.body;
+      const { role, isPremium, isRestricted, isSecondTimer, hscYear, sscYear } =
+        req.body;
       const updateData: any = {};
       if (role !== undefined) updateData.role = role;
       if (isPremium !== undefined) updateData.isPremium = isPremium;
@@ -658,21 +786,30 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/admin/users/:id/reset-password", requireAdmin, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { newPassword } = req.body;
-      if (!newPassword || newPassword.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
+  app.post(
+    "/api/admin/users/:id/reset-password",
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const { newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+          return res
+            .status(400)
+            .json({ message: "Password must be at least 6 characters" });
+        }
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const updated = await storage.updateUser(id, {
+          password: hashedPassword,
+        });
+        if (!updated)
+          return res.status(404).json({ message: "User not found" });
+        res.json({ message: "Password reset successfully" });
+      } catch (error: any) {
+        res.status(500).json({ message: error.message });
       }
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      const updated = await storage.updateUser(id, { password: hashedPassword });
-      if (!updated) return res.status(404).json({ message: "User not found" });
-      res.json({ message: "Password reset successfully" });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+    },
+  );
 
   app.get("/api/admin/timer-rules", requireAdmin, async (_req, res) => {
     try {
@@ -687,10 +824,18 @@ export async function registerRoutes(
     try {
       const { hscYear, sscYear, action } = req.body;
       if (!hscYear && !sscYear) {
-        return res.status(400).json({ message: "At least one year filter (HSC or SSC) is required" });
+        return res.status(400).json({
+          message: "At least one year filter (HSC or SSC) is required",
+        });
       }
-      if (!action || !["1st_timer", "2nd_timer", "restricted"].includes(action)) {
-        return res.status(400).json({ message: "Invalid action. Must be 1st_timer, 2nd_timer, or restricted" });
+      if (
+        !action ||
+        !["1st_timer", "2nd_timer", "restricted"].includes(action)
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid action. Must be 1st_timer, 2nd_timer, or restricted",
+        });
       }
 
       const updateData: any = {};
@@ -704,21 +849,37 @@ export async function registerRoutes(
         updateData.isRestricted = true;
       }
 
-      const count = await storage.bulkUpdateUsersByYear(hscYear || "", sscYear || "", updateData);
+      const count = await storage.bulkUpdateUsersByYear(
+        hscYear || "",
+        sscYear || "",
+        updateData,
+      );
 
       if (action === "1st_timer" || action === "2nd_timer") {
         const existingSetting = await storage.getSetting("timer_rules");
-        const rules: Array<{ hscYear: string; sscYear: string; status: string }> = (existingSetting?.value as any) || [];
+        const rules: Array<{
+          hscYear: string;
+          sscYear: string;
+          status: string;
+        }> = (existingSetting?.value as any) || [];
         const filteredRules = rules.filter((r: any) => {
-          if (hscYear && sscYear) return !(r.hscYear === hscYear && r.sscYear === sscYear);
+          if (hscYear && sscYear)
+            return !(r.hscYear === hscYear && r.sscYear === sscYear);
           if (hscYear) return !(r.hscYear === hscYear && !r.sscYear);
           return !(r.sscYear === sscYear && !r.hscYear);
         });
-        filteredRules.push({ hscYear: hscYear || "", sscYear: sscYear || "", status: action });
+        filteredRules.push({
+          hscYear: hscYear || "",
+          sscYear: sscYear || "",
+          status: action,
+        });
         await storage.setSetting("timer_rules", filteredRules);
       }
 
-      res.json({ message: `Successfully updated ${count} user(s). Rule saved for future registrations.`, count });
+      res.json({
+        message: `Successfully updated ${count} user(s). Rule saved for future registrations.`,
+        count,
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -726,7 +887,9 @@ export async function registerRoutes(
 
   app.get("/api/admin/enrollments", requireAdmin, async (req, res) => {
     try {
-      const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
+      const courseId = req.query.courseId
+        ? parseInt(req.query.courseId as string)
+        : undefined;
       let enrollmentList;
       if (courseId) {
         enrollmentList = await storage.getEnrollmentsByCourseId(courseId);
@@ -758,10 +921,13 @@ export async function registerRoutes(
       const id = parseInt(req.params.id);
       const { status } = req.body;
       if (!["approved", "declined"].includes(status)) {
-        return res.status(400).json({ message: "Status must be approved or declined" });
+        return res
+          .status(400)
+          .json({ message: "Status must be approved or declined" });
       }
       const updated = await storage.updateEnrollment(id, { status });
-      if (!updated) return res.status(404).json({ message: "Enrollment not found" });
+      if (!updated)
+        return res.status(404).json({ message: "Enrollment not found" });
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -776,8 +942,10 @@ export async function registerRoutes(
     try {
       const data = { ...req.body, createdBy: req.session.userId };
       if (data.price !== undefined) data.price = Number(data.price);
-      if (data.offerPrice !== undefined) data.offerPrice = data.offerPrice ? Number(data.offerPrice) : null;
-      if (data.lastDate !== undefined) data.lastDate = data.lastDate ? new Date(data.lastDate) : null;
+      if (data.offerPrice !== undefined)
+        data.offerPrice = data.offerPrice ? Number(data.offerPrice) : null;
+      if (data.lastDate !== undefined)
+        data.lastDate = data.lastDate ? new Date(data.lastDate) : null;
       if (data.isVisible === undefined) data.isVisible = true;
       const course = await storage.createCourse(data);
       res.json(course);
@@ -794,18 +962,31 @@ export async function registerRoutes(
   app.patch("/api/admin/courses/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { title, description, bannerImage, lastDate, price, offerPrice, access, isVisible } = req.body;
+      const {
+        title,
+        description,
+        bannerImage,
+        lastDate,
+        price,
+        offerPrice,
+        access,
+        isVisible,
+      } = req.body;
       const data: Record<string, any> = {};
       if (title !== undefined) data.title = title;
       if (description !== undefined) data.description = description;
       if (bannerImage !== undefined) data.bannerImage = bannerImage || null;
-      if (lastDate !== undefined) data.lastDate = lastDate ? new Date(lastDate) : null;
+      if (lastDate !== undefined)
+        data.lastDate = lastDate ? new Date(lastDate) : null;
       if (price !== undefined) data.price = Number(price);
-      if (offerPrice !== undefined) data.offerPrice = offerPrice === "" || offerPrice === null ? null : Number(offerPrice);
+      if (offerPrice !== undefined)
+        data.offerPrice =
+          offerPrice === "" || offerPrice === null ? null : Number(offerPrice);
       if (access !== undefined) data.access = access;
       if (isVisible !== undefined) data.isVisible = isVisible;
       const updated = await storage.updateCourse(id, data);
-      if (!updated) return res.status(404).json({ message: "Course not found" });
+      if (!updated)
+        return res.status(404).json({ message: "Course not found" });
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -823,8 +1004,16 @@ export async function registerRoutes(
   });
 
   // ======= MOCK TESTS CRUD =======
-  function mergeImageAssignments(questions: any[], imageAssignments?: any[]): any[] {
-    if (!imageAssignments || !Array.isArray(imageAssignments) || imageAssignments.length === 0) return questions;
+  function mergeImageAssignments(
+    questions: any[],
+    imageAssignments?: any[],
+  ): any[] {
+    if (
+      !imageAssignments ||
+      !Array.isArray(imageAssignments) ||
+      imageAssignments.length === 0
+    )
+      return questions;
     const imageMap = new Map<number, string>();
     for (const a of imageAssignments) {
       if (a.questionId != null && a.imageUrl) {
@@ -845,7 +1034,8 @@ export async function registerRoutes(
       if (data.duration) data.duration = Number(data.duration);
       if (data.publishTime) {
         const parsed = parseBDTime(data.publishTime);
-        if (!parsed) return res.status(400).json({ message: "Invalid publish time" });
+        if (!parsed)
+          return res.status(400).json({ message: "Invalid publish time" });
         data.publishTime = parsed;
       } else {
         return res.status(400).json({ message: "Publish time is required" });
@@ -863,28 +1053,46 @@ export async function registerRoutes(
   app.patch("/api/admin/mock-tests/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { title, tag, publishTime, duration, questions, access, isVisible, imageAssignments } = req.body;
+      const {
+        title,
+        tag,
+        publishTime,
+        duration,
+        questions,
+        access,
+        isVisible,
+        imageAssignments,
+      } = req.body;
       const data: Record<string, any> = {};
       if (title !== undefined) data.title = title;
       if (tag !== undefined) data.tag = tag;
       if (publishTime) {
         const parsed = parseBDTime(publishTime);
-        if (!parsed) return res.status(400).json({ message: "Invalid publish time" });
+        if (!parsed)
+          return res.status(400).json({ message: "Invalid publish time" });
         data.publishTime = parsed;
       }
       if (duration !== undefined) data.duration = Number(duration);
       if (questions !== undefined) {
         data.questions = mergeImageAssignments(questions, imageAssignments);
-      } else if (imageAssignments && Array.isArray(imageAssignments) && imageAssignments.length > 0) {
+      } else if (
+        imageAssignments &&
+        Array.isArray(imageAssignments) &&
+        imageAssignments.length > 0
+      ) {
         const existing = await storage.getMockTest(id);
         if (existing && Array.isArray(existing.questions)) {
-          data.questions = mergeImageAssignments(existing.questions as any[], imageAssignments);
+          data.questions = mergeImageAssignments(
+            existing.questions as any[],
+            imageAssignments,
+          );
         }
       }
       if (access !== undefined) data.access = access;
       if (isVisible !== undefined) data.isVisible = isVisible;
       const updated = await storage.updateMockTest(id, data);
-      if (!updated) return res.status(404).json({ message: "Mock test not found" });
+      if (!updated)
+        return res.status(404).json({ message: "Mock test not found" });
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -902,15 +1110,20 @@ export async function registerRoutes(
   });
 
   // ======= MOCK SUBMISSIONS (Admin) =======
-  app.get("/api/admin/mock-tests/:id/submissions", requireAdmin, async (req, res) => {
-    try {
-      const mockTestId = parseInt(req.params.id);
-      const submissions = await storage.getSubmissionsByMockTestId(mockTestId);
-      res.json(submissions);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  app.get(
+    "/api/admin/mock-tests/:id/submissions",
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const mockTestId = parseInt(req.params.id);
+        const submissions =
+          await storage.getSubmissionsByMockTestId(mockTestId);
+        res.json(submissions);
+      } catch (error: any) {
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
 
   // ======= CLASSES CRUD =======
   app.get("/api/admin/classes", requireAdmin, async (_req, res) => {
@@ -931,7 +1144,15 @@ export async function registerRoutes(
   app.patch("/api/admin/classes/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { title, videoUrl, tag, description, thumbnail, access, isVisible } = req.body;
+      const {
+        title,
+        videoUrl,
+        tag,
+        description,
+        thumbnail,
+        access,
+        isVisible,
+      } = req.body;
       const data: Record<string, any> = {};
       if (title !== undefined) data.title = title;
       if (videoUrl !== undefined) data.videoUrl = videoUrl;
@@ -978,7 +1199,8 @@ export async function registerRoutes(
     try {
       const id = parseInt(req.params.id);
       const updated = await storage.updateResource(id, req.body);
-      if (!updated) return res.status(404).json({ message: "Resource not found" });
+      if (!updated)
+        return res.status(404).json({ message: "Resource not found" });
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1004,7 +1226,8 @@ export async function registerRoutes(
     try {
       const data = { ...req.body, createdBy: req.session.userId };
       if (data.isVisible === undefined) data.isVisible = true;
-      if (data.date !== undefined) data.date = data.date ? new Date(data.date) : null;
+      if (data.date !== undefined)
+        data.date = data.date ? new Date(data.date) : null;
       const notice = await storage.createNotice(data);
       res.json(notice);
     } catch (error: any) {
@@ -1018,7 +1241,8 @@ export async function registerRoutes(
       const body = { ...req.body };
       if (body.date) body.date = new Date(body.date);
       const updated = await storage.updateNotice(id, body);
-      if (!updated) return res.status(404).json({ message: "Notice not found" });
+      if (!updated)
+        return res.status(404).json({ message: "Notice not found" });
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1058,7 +1282,8 @@ export async function registerRoutes(
       const data = { ...req.body };
       if (data.sortOrder !== undefined) data.sortOrder = Number(data.sortOrder);
       const updated = await storage.updateHeroBanner(id, data);
-      if (!updated) return res.status(404).json({ message: "Banner not found" });
+      if (!updated)
+        return res.status(404).json({ message: "Banner not found" });
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1101,7 +1326,8 @@ export async function registerRoutes(
       const data = { ...req.body };
       if (data.sortOrder !== undefined) data.sortOrder = Number(data.sortOrder);
       const updated = await storage.updateTeamMember(id, data);
-      if (!updated) return res.status(404).json({ message: "Team member not found" });
+      if (!updated)
+        return res.status(404).json({ message: "Team member not found" });
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
