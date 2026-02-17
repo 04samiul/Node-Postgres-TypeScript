@@ -12,13 +12,16 @@ if (!databaseUrl) {
   );
 }
 
+// Use connection string directly with ssl disabled for initial pool if needed, 
+// but preferred way for Supabase is letting the driver handle it via connectionString.
+const connectionString = databaseUrl.includes('?') 
+  ? `${databaseUrl}&sslmode=no-verify` 
+  : `${databaseUrl}?sslmode=no-verify`;
+
 export const pool = new Pool({ 
-  connectionString: databaseUrl,
-  ssl: {
-    rejectUnauthorized: false
-  },
+  connectionString,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000
+  connectionTimeoutMillis: 5000 // Increased timeout
 });
 export const db = drizzle(pool, { schema });
