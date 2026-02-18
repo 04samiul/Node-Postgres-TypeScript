@@ -4,6 +4,16 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
+import multer from "multer";
+import { createClient } from "@supabase/supabase-js";
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL_REST || "", // We need the REST URL for storage, not the DB pooler URL
+  process.env.SUPABASE_ANON_KEY || ""
+);
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
@@ -1341,6 +1351,37 @@ export async function registerRoutes(
       res.json({ message: "Deleted" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ======= UPLOADS =======
+  app.post("/api/uploads/request-url", requireAdmin, upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const file = req.file;
+      const bucketName = process.env.SUPABASE_BUCKET || "Uploads";
+      const fileName = `${Date.now()}-${file.originalname}`;
+      
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(fileName, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(fileName);
+
+      res.json({ objectPath: publicUrl });
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      res.status(500).json({ message: error.message || "Upload failed" });
     }
   });
 
