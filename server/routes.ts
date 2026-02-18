@@ -8,10 +8,12 @@ import multer from "multer";
 import { createClient } from "@supabase/supabase-js";
 
 // Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL_REST || "", // We need the REST URL for storage, not the DB pooler URL
-  process.env.SUPABASE_ANON_KEY || ""
-);
+const supabaseUrl = process.env.SUPABASE_URL_REST?.trim();
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY?.trim();
+
+const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -1357,6 +1359,10 @@ export async function registerRoutes(
   // ======= UPLOADS =======
   app.post("/api/uploads/request-url", requireAdmin, upload.single("file"), async (req, res) => {
     try {
+      if (!supabase) {
+        return res.status(500).json({ message: "Supabase storage not configured. Please check SUPABASE_URL_REST and SUPABASE_ANON_KEY." });
+      }
+
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
