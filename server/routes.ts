@@ -1380,6 +1380,19 @@ export async function registerRoutes(
       const bucketName = process.env.SUPABASE_BUCKET || "Uploads";
       const fileName = `${Date.now()}-${file.originalname}`;
       
+      // Ensure bucket exists or handle missing bucket gracefully
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      if (bucketsError) throw bucketsError;
+      
+      const bucketExists = buckets.some(b => b.name === bucketName);
+      if (!bucketExists) {
+        const { error: createError } = await supabase.storage.createBucket(bucketName, {
+          public: true,
+          fileSizeLimit: 10 * 1024 * 1024, // 10MB
+        });
+        if (createError) throw new Error(`Bucket "${bucketName}" not found and could not be created: ${createError.message}`);
+      }
+
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(fileName, file.buffer, {
