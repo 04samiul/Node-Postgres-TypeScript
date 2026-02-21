@@ -508,16 +508,19 @@ export async function registerRoutes(
         req.session.userId!,
         courseId,
       );
-      if (existing && existing.status !== "declined") {
+      if (existing && existing.status === "approved") {
         return res.status(400).json({
-          message:
-            existing.status === "approved"
-              ? "Already enrolled"
-              : "Enrollment request already pending",
+          message: "Already enrolled",
         });
       }
+      if (existing && existing.status === "pending") {
+        return res.status(400).json({
+          message: "Enrollment request already pending",
+        });
+      }
+      
       let enrollment;
-      if (existing && existing.status === "declined") {
+      if (existing && (existing.status === "declined")) {
         enrollment = await storage.updateEnrollment(existing.id, {
           status: "pending",
         });
