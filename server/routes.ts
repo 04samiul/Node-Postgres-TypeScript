@@ -985,6 +985,62 @@ export async function registerRoutes(
       const updated = await storage.updateEnrollment(id, { status });
       if (!updated)
         return res.status(404).json({ message: "Enrollment not found" });
+
+      // Send email to Student about status change
+      try {
+        const user = await storage.getUser(updated.userId);
+        const course = await storage.getCourse(updated.courseId);
+        
+        if (user && course) {
+          const isApproved = status === "approved";
+          await transporter.sendMail({
+            from: `"Crack-CU" <${process.env.SMTP_USER}>`,
+            to: user.email,
+            subject: `Enrollment ${isApproved ? "Approved" : "Declined"} - ${course.title}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 8px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <h1 style="color: #eb202a; margin: 0;">Crack-CU</h1>
+                  <p style="font-style: italic; color: #666;">Don't Just Study, Crack It!</p>
+                </div>
+                
+                <h2 style="color: ${isApproved ? "#059669" : "#dc2626"}; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                  Enrollment ${isApproved ? "Approved" : "Declined"}
+                </h2>
+                <p>Hi <strong>${user.fullName}</strong>,</p>
+                <p>Your enrollment request for <strong>${course.title}</strong> has been <strong>${status}</strong>.</p>
+                
+                ${isApproved ? `
+                <div style="background: #f0fdf4; border-left: 4px solid #059669; padding: 15px; margin: 20px 0;">
+                  <p style="margin: 0; color: #166534; font-weight: bold;">Congratulations!</p>
+                  <p style="margin: 5px 0;">You now have full access to the course materials. You can find it in your dashboard under "My Enrollments".</p>
+                </div>
+                <div style="text-align: center; margin: 25px 0;">
+                  <a href="${process.env.APP_URL || "https://crackcu.info"}/dashboard" style="background-color: #eb202a; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
+                </div>
+                ` : `
+                <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
+                  <p style="margin: 0; color: #991b1b; font-weight: bold;">Enrollment Declined</p>
+                  <p style="margin: 5px 0;">Unfortunately, your enrollment request was not approved at this time. This usually happens if payment verification fails.</p>
+                </div>
+                <p>If you believe this is a mistake, please contact us on WhatsApp.</p>
+                <div style="text-align: center; margin: 25px 0;">
+                  <a href="https://wa.me/8801522132809" style="background-color: #059669; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Contact on WhatsApp</a>
+                </div>
+                `}
+                
+                <br/>
+                <p>Regards,<br/><strong>Crack-CU Team</strong></p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                <p style="font-size: 12px; color: #999; text-align: center;">This is an automated email. Please do not reply directly.</p>
+              </div>
+            `,
+          });
+        }
+      } catch (emailErr) {
+        console.error("Failed to send enrollment status email:", emailErr);
+      }
+
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
