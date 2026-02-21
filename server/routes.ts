@@ -1388,8 +1388,7 @@ export async function registerRoutes(
     
     const bucketExists = buckets.some(b => b.name === bucketName);
     if (!bucketExists) {
-      console.log(`Bucket "${bucketName}" not found. Please create it manually in Supabase dashboard and set it to Public.`);
-      throw new Error(`Bucket "${bucketName}" not found. Please create a PUBLIC bucket named "${bucketName}" in your Supabase storage dashboard.`);
+      console.log(`Bucket "${bucketName}" not found. Attempting to use it anyway (it might be newly created).`);
     }
 
     const { data, error } = await supabase.storage
