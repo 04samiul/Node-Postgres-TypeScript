@@ -529,7 +529,8 @@ export async function registerRoutes(
         });
       }
 
-      if (user) {
+      const currentUser = await storage.getUser(req.session.userId!);
+      if (currentUser) {
         try {
           // Send email to Admin
           await transporter.sendMail({
@@ -540,13 +541,13 @@ export async function registerRoutes(
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 8px;">
                 <h2 style="color: #eb202a; border-bottom: 2px solid #eb202a; padding-bottom: 10px;">New Enrollment Request</h2>
                 <p>Hi Admin,</p>
-                <p><strong>${user.fullName}</strong> (${user.username}) wants to enroll in <strong>${course.title}</strong>.</p>
+                <p><strong>${currentUser.fullName}</strong> (${currentUser.username}) wants to enroll in <strong>${course.title}</strong>.</p>
                 
                 <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
                   <h3 style="margin-top: 0; color: #444;">User Details:</h3>
-                  <p><strong>WhatsApp:</strong> <a href="https://wa.me/${user.whatsapp?.replace(/\D/g, "")}" style="color: #059669; font-weight: bold;">${user.whatsapp}</a></p>
-                  <p><strong>Email:</strong> ${user.email}</p>
-                  <p><strong>HSC:</strong> ${user.hscRoll}, ${user.hscGroup}, ${user.hscYear}</p>
+                  <p><strong>WhatsApp:</strong> <a href="https://wa.me/${currentUser.whatsapp?.replace(/\D/g, "")}" style="color: #059669; font-weight: bold;">${currentUser.whatsapp}</a></p>
+                  <p><strong>Email:</strong> ${currentUser.email}</p>
+                  <p><strong>HSC:</strong> ${currentUser.hscRoll}, ${currentUser.hscGroup}, ${currentUser.hscYear}</p>
                 </div>
                 
                 <p>Please review this request in the admin dashboard.</p>
@@ -559,7 +560,7 @@ export async function registerRoutes(
           // Send confirmation email to Student
           await transporter.sendMail({
             from: `"Crack-CU" <${process.env.SMTP_USER}>`,
-            to: user.email,
+            to: currentUser.email,
             subject: `Enrollment Request Received - ${course.title}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 8px;">
@@ -569,7 +570,7 @@ export async function registerRoutes(
                 </div>
                 
                 <h2 style="color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px;">Enrollment Received</h2>
-                <p>Hi <strong>${user.fullName}</strong>,</p>
+                <p>Hi <strong>${currentUser.fullName}</strong>,</p>
                 <p>We've received your enrollment request for the following course:</p>
                 
                 <div style="background: #fff5f5; border-left: 4px solid #eb202a; padding: 15px; margin: 20px 0;">
@@ -988,15 +989,15 @@ export async function registerRoutes(
 
       // Send email to Student about status change
       try {
-        const user = await storage.getUser(updated.userId);
-        const course = await storage.getCourse(updated.courseId);
+        const studentUser = await storage.getUser(updated.userId);
+        const enrolledCourse = await storage.getCourse(updated.courseId);
         
-        if (user && course) {
+        if (studentUser && enrolledCourse) {
           const isApproved = status === "approved";
           await transporter.sendMail({
             from: `"Crack-CU" <${process.env.SMTP_USER}>`,
-            to: user.email,
-            subject: `Enrollment ${isApproved ? "Approved" : "Declined"} - ${course.title}`,
+            to: studentUser.email,
+            subject: `Enrollment ${isApproved ? "Approved" : "Declined"} - ${enrolledCourse.title}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 8px;">
                 <div style="text-align: center; margin-bottom: 20px;">
@@ -1007,8 +1008,8 @@ export async function registerRoutes(
                 <h2 style="color: ${isApproved ? "#059669" : "#dc2626"}; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                   Enrollment ${isApproved ? "Approved" : "Declined"}
                 </h2>
-                <p>Hi <strong>${user.fullName}</strong>,</p>
-                <p>Your enrollment request for <strong>${course.title}</strong> has been <strong>${status}</strong>.</p>
+                <p>Hi <strong>${studentUser.fullName}</strong>,</p>
+                <p>Your enrollment request for <strong>${enrolledCourse.title}</strong> has been <strong>${status}</strong>.</p>
                 
                 ${isApproved ? `
                 <div style="background: #f0fdf4; border-left: 4px solid #059669; padding: 15px; margin: 20px 0;">
