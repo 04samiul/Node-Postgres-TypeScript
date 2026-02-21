@@ -340,6 +340,16 @@ function EnrolledCourses({ userId }: { userId: number }) {
 
   const enrolled = enrollments?.filter((e: any) => e.status === "approved") || [];
   const pending = enrollments?.filter((e: any) => e.status === "pending") || [];
+  const declined = enrollments?.filter((e: any) => e.status === "declined") || [];
+
+  const enrollMutation = useMutation({
+    mutationFn: async (courseId: number) => {
+      await apiRequest("POST", `/api/enroll/${courseId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-enrollments"] });
+    },
+  });
 
   return (
     <div className="space-y-4">
@@ -393,6 +403,47 @@ function EnrolledCourses({ userId }: { userId: number }) {
                     <Clock className="h-4 w-4 shrink-0 text-amber-500" />
                     <span className="text-sm truncate flex-1">{e.courseTitle || `Course #${e.courseId}`}</span>
                     <Badge variant="outline" className="text-xs shrink-0 border-amber-500 text-amber-600 dark:text-amber-400">Pending</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {(isLoading || declined.length > 0) && (
+        <Card data-testid="card-declined-courses">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <X className="h-4 w-4 text-red-500" />
+              Declined Requests
+              {declined.length > 0 && <Badge variant="destructive" className="text-xs">{declined.length}</Badge>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (<Skeleton key={i} className="h-10 w-full" />))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {declined.map((e: any) => (
+                  <div key={e.id} className="flex flex-col gap-2 p-3 rounded-md bg-red-50/50 border border-red-100" data-testid={`enrollment-declined-${e.id}`}>
+                    <div className="flex items-center gap-2">
+                      <X className="h-4 w-4 shrink-0 text-red-500" />
+                      <span className="text-sm font-medium truncate flex-1">{e.courseTitle || `Course #${e.courseId}`}</span>
+                      <Badge variant="destructive" className="text-[10px] h-5 px-1.5">Declined</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Your enrollment request was declined. You can try enrolling again.</p>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="w-full text-xs h-8 border-red-200 hover:bg-red-50 text-red-600"
+                      onClick={() => enrollMutation.mutate(e.courseId)}
+                      disabled={enrollMutation.isPending}
+                    >
+                      {enrollMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : "Re-enroll"}
+                    </Button>
                   </div>
                 ))}
               </div>

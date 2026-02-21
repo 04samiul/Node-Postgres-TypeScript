@@ -151,9 +151,19 @@ export default function CoursesPage() {
                       Pending
                     </Button>
                   ) : enrollmentMap[course.id] === "declined" ? (
-                    <Button size="sm" variant="outline" disabled data-testid={`button-declined-${course.id}`}>
-                      Declined
-                    </Button>
+                    <div className="flex flex-col gap-2 w-full sm:w-auto">
+                      <Badge variant="destructive" className="text-[10px] py-0 h-5 justify-center">Declined</Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEnroll(course)}
+                        disabled={enrollMutation.isPending}
+                        data-testid={`button-re-enroll-${course.id}`}
+                        className="h-8 text-xs border-red-200 hover:bg-red-50 text-red-600"
+                      >
+                        {enrollMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : "Re-enroll"}
+                      </Button>
+                    </div>
                   ) : course.access === "paid" && !user?.isPremium ? (
                     <Button size="sm" variant="outline" disabled data-testid={`button-course-premium-${course.id}`}>
                       Premium Only
