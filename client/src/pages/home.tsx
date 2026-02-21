@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +20,17 @@ import {
   Image as ImageIcon,
   Video,
   ExternalLink,
+  CheckCircle2,
+  Loader2,
+  X,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import type { Course, MockTest, Class, Resource, Notice, HeroBanner } from "@shared/schema";
+import type { Course, MockTest, Class, Resource, Notice, HeroBanner, Enrollment } from "@shared/schema";
 import { useState, useEffect, useCallback } from "react";
 import { useSEO } from "@/hooks/use-seo";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 30 },
@@ -218,9 +224,42 @@ function HeroSection() {
 }
 
 function CoursesSection() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["/api/courses", "?limit=3"],
   });
+
+  const { data: enrollments } = useQuery<Enrollment[]>({
+    queryKey: ["/api/my-enrollments"],
+    enabled: !!user,
+  });
+
+  const enrollmentMap: Record<number, string> = {};
+  enrollments?.forEach((e) => {
+    enrollmentMap[e.courseId] = e.status;
+  });
+
+  const enrollMutation = useMutation({
+    mutationFn: async (courseId: number) => {
+      await apiRequest("POST", `/api/enroll/${courseId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-enrollments"] });
+      setShowConfirm(true);
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleEnroll = (course: Course) => {
+    setSelectedCourse(course);
+    enrollMutation.mutate(course.id);
+  };
 
   return (
     <motion.section
@@ -292,11 +331,50 @@ function CoursesSection() {
                     More
                   </Button>
                 </Link>
-                <Link href="/auth">
-                  <Button size="sm" data-testid={`button-course-enroll-${course.id}`}>
-                    Enroll
+                {!user ? (
+                  <Link href="/auth">
+                    <Button size="sm" variant="outline" data-testid={`button-course-enroll-${course.id}`}>
+                      Enroll
+                    </Button>
+                  </Link>
+                ) : enrollmentMap[course.id] === "approved" ? (
+                  <Button size="sm" variant="outline" disabled data-testid={`button-enrolled-${course.id}`}>
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-green-600" />
+                    Enrolled
                   </Button>
-                </Link>
+                ) : enrollmentMap[course.id] === "pending" ? (
+                  <Button size="sm" variant="outline" disabled data-testid={`button-pending-${course.id}`}>
+                    <Loader2 className="h-3.5 w-3.5 mr-1 text-amber-500 animate-spin" />
+                    Pending
+                  </Button>
+                ) : enrollmentMap[course.id] === "declined" ? (
+                  <div className="flex flex-col gap-1 w-full sm:w-auto">
+                    <Badge variant="destructive" className="text-[10px] py-0 h-4 justify-center">Declined</Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEnroll(course)}
+                      disabled={enrollMutation.isPending}
+                      data-testid={`button-re-enroll-${course.id}`}
+                      className="h-7 text-[10px] border-red-200 hover:bg-red-50 text-red-600"
+                    >
+                      {enrollMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : "Re-enroll"}
+                    </Button>
+                  </div>
+                ) : course.access === "paid" && !user?.isPremium ? (
+                  <Button size="sm" variant="outline" disabled data-testid={`button-course-premium-${course.id}`}>
+                    Premium Only
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => handleEnroll(course)}
+                    disabled={enrollMutation.isPending}
+                    data-testid={`button-course-enroll-${course.id}`}
+                  >
+                    {enrollMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Enroll"}
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}
@@ -304,6 +382,23 @@ function CoursesSection() {
       ) : (
         <p className="text-muted-foreground text-sm" data-testid="text-courses-empty">No courses available yet.</p>
       )}
+
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-amber-500" />
+              Enrollment Request Submitted
+            </DialogTitle>
+            <DialogDescription className="pt-3 text-base">
+              Your enrollment request for <strong>{selectedCourse?.title}</strong> has been submitted. You will soon be contacted by our representative.
+            </DialogDescription>
+          </DialogHeader>
+          <Button onClick={() => setShowConfirm(false)} data-testid="button-close-enroll-dialog">
+            Got it
+          </Button>
+        </DialogContent>
+      </Dialog>
     </motion.section>
   );
 }
