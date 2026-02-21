@@ -874,15 +874,15 @@ function MockTestForm({
     }
     setUploading(true);
     try {
+      const formData = new FormData();
+      formData.append("file", file);
+
       const res = await fetch("/api/uploads/request-url", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+        body: formData,
       });
-      if (!res.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL, objectPath } = await res.json();
-      const putRes = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-      if (!putRes.ok) throw new Error("Upload failed");
+      if (!res.ok) throw new Error("Upload failed");
+      const { objectPath } = await res.json();
 
       const existing = imageAssignments.find(a => a.questionId === idNum);
       if (existing) {
