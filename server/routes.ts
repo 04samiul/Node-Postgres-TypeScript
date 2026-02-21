@@ -1380,20 +1380,19 @@ export async function registerRoutes(
       const bucketName = process.env.SUPABASE_BUCKET || "Uploads";
       const fileName = `${Date.now()}-${file.originalname}`;
       
-      // Ensure bucket exists or handle missing bucket gracefully
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      if (bucketsError) throw bucketsError;
-      
-      const bucketExists = buckets.some(b => b.name === bucketName);
-      if (!bucketExists) {
-        const { error: createError } = await supabase.storage.createBucket(bucketName, {
-          public: true,
-          fileSizeLimit: 10 * 1024 * 1024, // 10MB
-        });
-        if (createError) throw new Error(`Bucket "${bucketName}" not found and could not be created: ${createError.message}`);
-      }
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+    if (bucketsError) {
+      console.error("Error listing buckets:", bucketsError);
+      throw bucketsError;
+    }
+    
+    const bucketExists = buckets.some(b => b.name === bucketName);
+    if (!bucketExists) {
+      console.log(`Bucket "${bucketName}" not found. Please create it manually in Supabase dashboard and set it to Public.`);
+      throw new Error(`Bucket "${bucketName}" not found. Please create a PUBLIC bucket named "${bucketName}" in your Supabase storage dashboard.`);
+    }
 
-      const { data, error } = await supabase.storage
+    const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(fileName, file.buffer, {
           contentType: file.mimetype,
