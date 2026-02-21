@@ -529,42 +529,73 @@ export async function registerRoutes(
         });
       }
 
-      const user = await storage.getUser(req.session.userId!);
       if (user) {
         try {
+          // Send email to Admin
           await transporter.sendMail({
             from: `"Crack-CU" <${process.env.SMTP_USER}>`,
             to: process.env.SMTP_USER || "crackcu.info@gmail.com",
             subject: `New Enrollment Request - ${course.title}`,
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-                <p>Hi!</p>
-                <p><strong>${user.username}</strong>, wants to enroll in <strong>${course.title}</strong></p>
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #eb202a; border-bottom: 2px solid #eb202a; padding-bottom: 10px;">New Enrollment Request</h2>
+                <p>Hi Admin,</p>
+                <p><strong>${user.fullName}</strong> (${user.username}) wants to enroll in <strong>${course.title}</strong>.</p>
+                
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <h3 style="margin-top: 0; color: #444;">User Details:</h3>
+                  <p><strong>WhatsApp:</strong> <a href="https://wa.me/${user.whatsapp?.replace(/\D/g, "")}" style="color: #059669; font-weight: bold;">${user.whatsapp}</a></p>
+                  <p><strong>Email:</strong> ${user.email}</p>
+                  <p><strong>HSC:</strong> ${user.hscRoll}, ${user.hscGroup}, ${user.hscYear}</p>
+                </div>
+                
+                <p>Please review this request in the admin dashboard.</p>
                 <br/>
-                <p><strong>User Details:</strong></p>
-                <table style="border-collapse: collapse; width: 100%;">
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>Full Name</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.fullName}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>Username</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.username}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>Email</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.email}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>HSC Roll</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.hscRoll}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>HSC Reg</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.hscReg}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>HSC Year</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.hscYear}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>HSC Group</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.hscGroup}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>HSC Board</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.hscBoard}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>SSC Roll</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.sscRoll}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>SSC Reg</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.sscReg}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>SSC Year</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.sscYear}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>SSC Group</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.sscGroup}</td></tr>
-                  <tr><td style="padding: 6px 12px; border: 1px solid #e5e7eb;"><strong>SSC Board</strong></td><td style="padding: 6px 12px; border: 1px solid #e5e7eb;">${user.sscBoard}</td></tr>
-                </table>
+                <p>Regards,<br/><strong>Crack-CU System</strong></p>
+              </div>
+            `,
+          });
+
+          // Send confirmation email to Student
+          await transporter.sendMail({
+            from: `"Crack-CU" <${process.env.SMTP_USER}>`,
+            to: user.email,
+            subject: `Enrollment Request Received - ${course.title}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 8px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <h1 style="color: #eb202a; margin: 0;">Crack-CU</h1>
+                  <p style="font-style: italic; color: #666;">Don't Just Study, Crack It!</p>
+                </div>
+                
+                <h2 style="color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px;">Enrollment Received</h2>
+                <p>Hi <strong>${user.fullName}</strong>,</p>
+                <p>We've received your enrollment request for the following course:</p>
+                
+                <div style="background: #fff5f5; border-left: 4px solid #eb202a; padding: 15px; margin: 20px 0;">
+                  <p style="margin: 5px 0;"><strong>Course:</strong> ${course.title}</p>
+                  <p style="margin: 5px 0;"><strong>Price:</strong> ${course.offerPrice || course.price} BDT</p>
+                  ${course.lastDate ? `<p style="margin: 5px 0;"><strong>Last Date:</strong> ${formatBDTime(new Date(course.lastDate))}</p>` : ""}
+                </div>
+
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px; text-align: center; margin: 25px 0;">
+                  <p style="margin-bottom: 10px; font-weight: bold; color: #166534;">Important Next Step:</p>
+                  <p style="margin-bottom: 15px;">To complete your enrollment and get instant access, please contact us on WhatsApp with your payment details.</p>
+                  <a href="https://wa.me/8801522132809" style="background-color: #059669; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Contact on WhatsApp</a>
+                </div>
+
+                <p>Once we verify your request, your enrollment will be approved and you'll get full access to the course materials.</p>
+                
                 <br/>
-                <p><strong>User WhatsApp Number:</strong> <a href="https://wa.me/${user.whatsapp?.replace(/\D/g, "")}">${user.whatsapp}</a></p>
+                <p>Regards,<br/><strong>Crack-CU Team</strong></p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                <p style="font-size: 12px; color: #999; text-align: center;">This is an automated email. Please do not reply directly.</p>
               </div>
             `,
           });
         } catch (emailErr) {
           console.error(
-            "Failed to send enrollment notification email:",
+            "Failed to send enrollment notification emails:",
             emailErr,
           );
         }
