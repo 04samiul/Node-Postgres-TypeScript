@@ -9,7 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL_REST?.trim();
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY?.trim();
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
 const isValidUrl = (url: string) => {
   try {
@@ -20,8 +20,13 @@ const isValidUrl = (url: string) => {
   }
 };
 
-const supabase = (supabaseUrl && isValidUrl(supabaseUrl) && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey)
+const supabase = (supabaseUrl && isValidUrl(supabaseUrl) && supabaseServiceKey) 
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
   : null;
 
 const upload = multer({ storage: multer.memoryStorage() });
