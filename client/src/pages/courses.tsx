@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { BookOpen, Calendar, Image as ImageIcon, Loader2, CheckCircle2 } from "lucide-react";
+import { BookOpen, Calendar, Image as ImageIcon, Loader2, CheckCircle2, Crown } from "lucide-react";
 import type { Course, Enrollment } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -87,8 +87,16 @@ export default function CoursesPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: idx * 0.05 }}
+              className="h-full"
             >
-              <Card className="overflow-visible flex flex-col h-full" data-testid={`card-course-${course.id}`}>
+              <Card 
+                className={`overflow-visible flex flex-col h-full transition-all duration-300 ${
+                  course.price > 0 
+                    ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm hover:shadow-amber-100 dark:hover:shadow-amber-900/20" 
+                    : ""
+                }`}
+                data-testid={`card-course-${course.id}`}
+              >
                 <div className="relative h-48 bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
                   {course.bannerImage ? (
                     <img
@@ -99,6 +107,14 @@ export default function CoursesPage() {
                     />
                   ) : (
                     <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
+                  )}
+                  {course.price > 0 && (
+                    <div className="absolute top-3 right-3 z-10">
+                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm scale-110">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Premium
+                      </Badge>
+                    </div>
                   )}
                 </div>
                 <CardHeader className="pb-2">
