@@ -24,6 +24,7 @@ import {
   Loader2,
   X,
   Crown,
+  Download,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { Course, MockTest, Class, Resource, Notice, HeroBanner, Enrollment } from "@shared/schema";
@@ -491,6 +492,16 @@ function MockTestsSection() {
                       <Clock className="h-3.5 w-3.5 mr-1" />
                       Upcoming
                     </Button>
+                  ) : (test.access === "signin" || test.access === "paid") && !user ? (
+                    <Link href="/auth">
+                      <Button size="sm" data-testid={`button-mocktest-login-${test.id}`}>
+                        Login to Start
+                      </Button>
+                    </Link>
+                  ) : test.access === "paid" && !user?.isPremium ? (
+                    <Button size="sm" variant="outline" disabled data-testid={`button-premium-${test.id}`}>
+                      Premium Only
+                    </Button>
                   ) : (
                     <Link href={`/mock-tests/${test.id}`}>
                       <Button size="sm" data-testid={`button-mocktest-start-${test.id}`}>
@@ -576,15 +587,41 @@ function ClassesSection() {
                   <CardTitle className="text-base line-clamp-1" data-testid={`text-class-title-${cls.id}`}>
                     {cls.title}
                   </CardTitle>
-                  <Badge variant="secondary" data-testid={`badge-class-tag-${cls.id}`}>{cls.tag}</Badge>
+                  <div className="flex gap-1">
+                    {cls.access === "paid" && (
+                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Premium
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" data-testid={`badge-class-tag-${cls.id}`}>{cls.tag}</Badge>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1">
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Calendar className="h-3.5 w-3.5" />
                   <span data-testid={`text-class-date-${cls.id}`}>{format(new Date(cls.createdAt), "MMM dd, yyyy")}</span>
                 </div>
               </CardContent>
+              <CardFooter>
+                {cls.access === "paid" && !user?.isPremium ? (
+                  <Button size="sm" variant="outline" disabled data-testid={`button-premium-${cls.id}`}>Premium Only</Button>
+                ) : cls.access === "signin" && !user ? (
+                  <Link href="/auth">
+                    <Button size="sm" variant="outline" data-testid={`button-login-watch-${cls.id}`}>
+                      Login to Watch
+                    </Button>
+                  </Link>
+                ) : (
+                  <a href={cls.videoUrl || "#"} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" data-testid={`button-watch-${cls.id}`}>
+                      <Play className="h-3.5 w-3.5 mr-1" />
+                      Watch
+                    </Button>
+                  </a>
+                )}
+              </CardFooter>
             </Card>
           ))}
         </div>
@@ -658,12 +695,22 @@ function ResourcesSection() {
                 </div>
               </CardContent>
               <CardFooter>
-                <a href={resource.fileUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="sm" data-testid={`button-resource-download-${resource.id}`}>
-                    <Download className="h-3.5 w-3.5 mr-1" />
-                    Download
-                  </Button>
-                </a>
+                {resource.access === "paid" && !user?.isPremium ? (
+                  <Button size="sm" variant="outline" disabled data-testid={`button-premium-${resource.id}`}>Premium Only</Button>
+                ) : resource.access === "signin" && !user ? (
+                  <Link href="/auth">
+                    <Button size="sm" variant="outline" data-testid={`button-login-download-${resource.id}`}>
+                      Login to Download
+                    </Button>
+                  </Link>
+                ) : (
+                  <a href={resource.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm" data-testid={`button-resource-download-${resource.id}`}>
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                      Download
+                    </Button>
+                  </a>
+                )}
               </CardFooter>
             </Card>
           ))}

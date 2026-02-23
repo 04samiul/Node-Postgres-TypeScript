@@ -105,7 +105,7 @@ export default function ClassesPage() {
                 <CardFooter>
                   {cls.access === "paid" && !user?.isPremium ? (
                     <Button size="sm" variant="outline" disabled data-testid={`button-premium-${cls.id}`}>Premium Only</Button>
-                  ) : !user ? (
+                  ) : cls.access === "signin" && !user ? (
                     <Link href="/auth"><Button size="sm" variant="outline" data-testid={`button-login-watch-${cls.id}`}>Login to Watch</Button></Link>
                   ) : cls.videoUrl ? (
                     <a href={cls.videoUrl} target="_blank" rel="noopener noreferrer">

@@ -139,7 +139,7 @@ export default function MockTestsPage() {
                         <Clock className="h-3.5 w-3.5 mr-1" />
                         Upcoming
                       </Button>
-                    ) : !user && test.access !== "all" ? (
+                    ) : (test.access === "signin" || test.access === "paid") && !user ? (
                       <Link href="/auth">
                         <Button size="sm">Sign in to Start</Button>
                       </Link>
