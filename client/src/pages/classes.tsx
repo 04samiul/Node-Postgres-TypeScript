@@ -17,6 +17,7 @@ const FILTER_TAGS = ["All", "English", "Analytical Skill", "Problem Solving"];
 export default function ClassesPage() {
   useSEO({ title: "Video Classes", description: "Watch expert video classes for CU admission preparation. Covering English, Analytical Skills, and Problem Solving subjects.", path: "/classes" });
 
+  const [limit, setLimit] = useState(6);
   const { data: classItems, isLoading } = useQuery<Class[]>({
     queryKey: ["/api/classes"],
   });
@@ -24,6 +25,8 @@ export default function ClassesPage() {
   const [filter, setFilter] = useState("All");
 
   const filtered = classItems?.filter((c) => filter === "All" || c.tag === filter) ?? [];
+  const displayed = filtered.slice(0, limit);
+  const hasMore = limit < filtered.length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8" data-testid="page-classes">
@@ -38,7 +41,10 @@ export default function ClassesPage() {
             key={tag}
             variant={filter === tag ? "default" : "outline"}
             size="sm"
-            onClick={() => setFilter(tag)}
+            onClick={() => {
+              setFilter(tag);
+              setLimit(6);
+            }}
             data-testid={`filter-${tag.toLowerCase().replace(/\s/g, "-")}`}
           >
             {tag}
@@ -48,80 +54,95 @@ export default function ClassesPage() {
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
               <Skeleton className="h-48 w-full rounded-t-xl rounded-b-none" />
               <CardContent className="pt-4"><Skeleton className="h-5 w-3/4 mb-2" /><Skeleton className="h-4 w-1/2" /></CardContent>
             </Card>
           ))}
         </div>
-      ) : filtered.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((cls, idx) => (
-            <motion.div key={cls.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="h-full">
-              <Card 
-                className={`overflow-visible flex flex-col h-full transition-all duration-300 ${
-                  cls.access === "paid" 
-                    ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
-                    : ""
-                }`} 
-                data-testid={`card-class-${cls.id}`}
+      ) : displayed.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {displayed.map((cls, idx) => (
+              <motion.div key={cls.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="h-full">
+                <Card 
+                  className={`overflow-visible flex flex-col h-full transition-all duration-300 ${
+                    cls.access === "paid" 
+                      ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                      : ""
+                  }`} 
+                  data-testid={`card-class-${cls.id}`}
+                >
+                  <div className="relative h-48 bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
+                    {cls.thumbnail ? (
+                      <img src={cls.thumbnail} alt={cls.title} className="w-full h-full object-cover rounded-t-xl" loading="lazy" />
+                    ) : (
+                      <Video className="h-12 w-12 text-muted-foreground/40" />
+                    )}
+                    {cls.access === "paid" && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm scale-110">
+                          <Crown className="h-3 w-3 mr-1" />
+                          Premium
+                        </Badge>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/20 rounded-t-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                      <div className="h-12 w-12 rounded-full bg-white/90 flex items-center justify-center">
+                        <Play className="h-5 w-5 text-foreground ml-0.5" />
+                      </div>
+                    </div>
+                  </div>
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <CardTitle className="text-base line-clamp-1">{cls.title}</CardTitle>
+                      <div className="flex gap-1 flex-wrap">
+                        <Badge variant="secondary">{cls.tag}</Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1">
+                    {cls.description && <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{cls.description}</p>}
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>{format(new Date(cls.createdAt), "MMM dd, yyyy")}</span>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    {cls.access === "paid" && !user?.isPremium ? (
+                      <Button size="sm" variant="outline" disabled data-testid={`button-premium-${cls.id}`}>Premium Only</Button>
+                    ) : cls.access === "signin" && !user ? (
+                      <Link href="/auth"><Button size="sm" variant="outline" data-testid={`button-login-watch-${cls.id}`}>Login to Watch</Button></Link>
+                    ) : cls.videoUrl ? (
+                      <a href={cls.videoUrl} target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" data-testid={`button-watch-${cls.id}`}>
+                          <Play className="h-3.5 w-3.5 mr-1" />
+                          Watch
+                        </Button>
+                      </a>
+                    ) : (
+                      <Button size="sm" variant="outline" disabled>No Video</Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+          {hasMore && (
+            <div className="flex justify-center mt-12">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                onClick={() => setLimit(prev => prev + 6)}
+                className="min-w-[200px]"
+                data-testid="button-load-more"
               >
-                <div className="relative h-48 bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
-                  {cls.thumbnail ? (
-                    <img src={cls.thumbnail} alt={cls.title} className="w-full h-full object-cover rounded-t-xl" loading="lazy" />
-                  ) : (
-                    <Video className="h-12 w-12 text-muted-foreground/40" />
-                  )}
-                  {cls.access === "paid" && (
-                    <div className="absolute top-3 right-3 z-10">
-                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm scale-110">
-                        <Crown className="h-3 w-3 mr-1" />
-                        Premium
-                      </Badge>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/20 rounded-t-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <div className="h-12 w-12 rounded-full bg-white/90 flex items-center justify-center">
-                      <Play className="h-5 w-5 text-foreground ml-0.5" />
-                    </div>
-                  </div>
-                </div>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2 flex-wrap">
-                    <CardTitle className="text-base line-clamp-1">{cls.title}</CardTitle>
-                    <div className="flex gap-1 flex-wrap">
-                      <Badge variant="secondary">{cls.tag}</Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  {cls.description && <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{cls.description}</p>}
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>{format(new Date(cls.createdAt), "MMM dd, yyyy")}</span>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  {cls.access === "paid" && !user?.isPremium ? (
-                    <Button size="sm" variant="outline" disabled data-testid={`button-premium-${cls.id}`}>Premium Only</Button>
-                  ) : cls.access === "signin" && !user ? (
-                    <Link href="/auth"><Button size="sm" variant="outline" data-testid={`button-login-watch-${cls.id}`}>Login to Watch</Button></Link>
-                  ) : cls.videoUrl ? (
-                    <a href={cls.videoUrl} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" data-testid={`button-watch-${cls.id}`}>
-                        <Play className="h-3.5 w-3.5 mr-1" />
-                        Watch
-                      </Button>
-                    </a>
-                  ) : (
-                    <Button size="sm" variant="outline" disabled>No Video</Button>
-                  )}
-                </CardFooter>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+                Load More Classes
+              </Button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-16">
           <Video className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
