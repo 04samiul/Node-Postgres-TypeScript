@@ -452,13 +452,29 @@ function MockTestsSection() {
             const publishDate = new Date(test.publishTime);
             const isUpcoming = publishDate.getTime() > Date.now();
             return (
-              <Card key={test.id} className="flex flex-col" data-testid={`card-mocktest-${test.id}`}>
+              <Card 
+                key={test.id} 
+                className={`flex flex-col transition-all duration-300 ${
+                  test.access === "paid" 
+                    ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                    : ""
+                }`} 
+                data-testid={`card-mocktest-${test.id}`}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2 flex-wrap">
                     <CardTitle className="text-base line-clamp-1" data-testid={`text-mocktest-title-${test.id}`}>
                       {test.title}
                     </CardTitle>
-                    <Badge variant="secondary" data-testid={`badge-mocktest-tag-${test.id}`}>{test.tag}</Badge>
+                    <div className="flex gap-1">
+                      {test.access === "paid" && (
+                        <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm">
+                          <Crown className="h-3 w-3 mr-1" />
+                          Premium
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" data-testid={`badge-mocktest-tag-${test.id}`}>{test.tag}</Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1">
@@ -524,7 +540,15 @@ function ClassesSection() {
       ) : classItems && classItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {classItems.map((cls) => (
-            <Card key={cls.id} className="overflow-visible flex flex-col" data-testid={`card-class-${cls.id}`}>
+            <Card 
+              key={cls.id} 
+              className={`overflow-visible flex flex-col transition-all duration-300 ${
+                cls.access === "paid" 
+                  ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                  : ""
+              }`} 
+              data-testid={`card-class-${cls.id}`}
+            >
               <div className="relative h-40 bg-muted rounded-t-xl flex items-center justify-center">
                 {cls.thumbnail ? (
                   <img
@@ -536,6 +560,14 @@ function ClassesSection() {
                   />
                 ) : (
                   <Video className="h-12 w-12 text-muted-foreground/40" />
+                )}
+                {cls.access === "paid" && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm">
+                      <Crown className="h-3 w-3 mr-1" />
+                      Premium
+                    </Badge>
+                  </div>
                 )}
               </div>
               <CardHeader>
@@ -592,14 +624,30 @@ function ResourcesSection() {
       ) : resourceItems && resourceItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {resourceItems.map((resource) => (
-            <Card key={resource.id} className="flex flex-col" data-testid={`card-resource-${resource.id}`}>
+            <Card 
+              key={resource.id} 
+              className={`flex flex-col transition-all duration-300 ${
+                resource.access === "paid" 
+                  ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                  : ""
+              }`} 
+              data-testid={`card-resource-${resource.id}`}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between gap-2 flex-wrap">
                   <CardTitle className="text-base line-clamp-1" data-testid={`text-resource-title-${resource.id}`}>
                     <FileText className="h-4 w-4 inline mr-1.5 -mt-0.5" />
                     {resource.title}
                   </CardTitle>
-                  <Badge variant="secondary" data-testid={`badge-resource-tag-${resource.id}`}>{resource.tag}</Badge>
+                  <div className="flex gap-1">
+                    {resource.access === "paid" && (
+                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Premium
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" data-testid={`badge-resource-tag-${resource.id}`}>{resource.tag}</Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="flex-1">

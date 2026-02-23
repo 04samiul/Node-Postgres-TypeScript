@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { Clock, Play, Calendar, FileText } from "lucide-react";
+import { Clock, Play, Calendar, FileText, Crown } from "lucide-react";
 import type { MockTest } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
@@ -95,18 +95,28 @@ export default function MockTestsPage() {
             const publishDate = new Date(test.publishTime);
             const isUpcoming = publishDate.getTime() > Date.now();
             return (
-              <motion.div key={test.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
-                <Card className="flex flex-col h-full" data-testid={`card-mocktest-${test.id}`}>
+              <motion.div key={test.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="h-full">
+                <Card 
+                  className={`flex flex-col h-full transition-all duration-300 ${
+                    test.access === "paid" 
+                      ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                      : ""
+                  }`} 
+                  data-testid={`card-mocktest-${test.id}`}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2 flex-wrap">
                       <CardTitle className="text-base line-clamp-1" data-testid={`text-mocktest-title-${test.id}`}>
                         {test.title}
                       </CardTitle>
                       <div className="flex gap-1 flex-wrap">
+                        {test.access === "paid" && (
+                          <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm">
+                            <Crown className="h-3 w-3 mr-1" />
+                            Premium
+                          </Badge>
+                        )}
                         <Badge variant="secondary">{test.tag}</Badge>
-                        <Badge variant={test.access === "paid" ? "default" : "outline"}>
-                          {test.access === "paid" ? "Paid" : "Free"}
-                        </Badge>
                       </div>
                     </div>
                   </CardHeader>

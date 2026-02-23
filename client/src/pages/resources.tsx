@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Calendar, Download, FileText } from "lucide-react";
+import { Calendar, Download, FileText, Crown } from "lucide-react";
 import type { Resource } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useSEO } from "@/hooks/use-seo";
@@ -54,8 +54,15 @@ export default function ResourcesPage() {
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((resource, idx) => (
-            <motion.div key={resource.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
-              <Card className="flex flex-col h-full" data-testid={`card-resource-${resource.id}`}>
+            <motion.div key={resource.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="h-full">
+              <Card 
+                className={`flex flex-col h-full transition-all duration-300 ${
+                  resource.access === "paid" 
+                    ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                    : ""
+                }`} 
+                data-testid={`card-resource-${resource.id}`}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2 flex-wrap">
                     <CardTitle className="text-base line-clamp-1">
@@ -63,10 +70,13 @@ export default function ResourcesPage() {
                       {resource.title}
                     </CardTitle>
                     <div className="flex gap-1 flex-wrap">
+                      {resource.access === "paid" && (
+                        <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm">
+                          <Crown className="h-3 w-3 mr-1" />
+                          Premium
+                        </Badge>
+                      )}
                       <Badge variant="secondary">{resource.tag}</Badge>
-                      <Badge variant={resource.access === "paid" ? "default" : "outline"}>
-                        {resource.access === "paid" ? "Paid" : "Free"}
-                      </Badge>
                     </div>
                   </div>
                 </CardHeader>

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Calendar, Video, Play } from "lucide-react";
+import { Calendar, Video, Play, Crown } from "lucide-react";
 import type { Class } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
@@ -58,13 +58,28 @@ export default function ClassesPage() {
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((cls, idx) => (
-            <motion.div key={cls.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
-              <Card className="overflow-visible flex flex-col h-full" data-testid={`card-class-${cls.id}`}>
+            <motion.div key={cls.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="h-full">
+              <Card 
+                className={`overflow-visible flex flex-col h-full transition-all duration-300 ${
+                  cls.access === "paid" 
+                    ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                    : ""
+                }`} 
+                data-testid={`card-class-${cls.id}`}
+              >
                 <div className="relative h-48 bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
                   {cls.thumbnail ? (
                     <img src={cls.thumbnail} alt={cls.title} className="w-full h-full object-cover rounded-t-xl" loading="lazy" />
                   ) : (
                     <Video className="h-12 w-12 text-muted-foreground/40" />
+                  )}
+                  {cls.access === "paid" && (
+                    <div className="absolute top-3 right-3 z-10">
+                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm scale-110">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Premium
+                      </Badge>
+                    </div>
                   )}
                   <div className="absolute inset-0 bg-black/20 rounded-t-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                     <div className="h-12 w-12 rounded-full bg-white/90 flex items-center justify-center">
@@ -77,9 +92,6 @@ export default function ClassesPage() {
                     <CardTitle className="text-base line-clamp-1">{cls.title}</CardTitle>
                     <div className="flex gap-1 flex-wrap">
                       <Badge variant="secondary">{cls.tag}</Badge>
-                      <Badge variant={cls.access === "paid" ? "default" : "outline"}>
-                        {cls.access === "paid" ? "Paid" : "Free"}
-                      </Badge>
                     </div>
                   </div>
                 </CardHeader>
