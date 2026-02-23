@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Loader2,
   X,
+  Crown,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { Course, MockTest, Class, Resource, Notice, HeroBanner, Enrollment } from "@shared/schema";
