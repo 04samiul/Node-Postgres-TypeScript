@@ -24,7 +24,6 @@ import {
   Loader2,
   X,
   Crown,
-  Download,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { Course, MockTest, Class, Resource, Notice, HeroBanner, Enrollment } from "@shared/schema";
@@ -422,6 +421,7 @@ function CoursesSection() {
 }
 
 function MockTestsSection() {
+  const { user } = useAuth();
   const { data: mockTests, isLoading } = useQuery<MockTest[]>({
     queryKey: ["/api/mock-tests", "?limit=3"],
   });
@@ -523,6 +523,7 @@ function MockTestsSection() {
 }
 
 function ClassesSection() {
+  const { user } = useAuth();
   const { data: classItems, isLoading } = useQuery<Class[]>({
     queryKey: ["/api/classes", "?limit=3"],
   });
@@ -633,6 +634,7 @@ function ClassesSection() {
 }
 
 function ResourcesSection() {
+  const { user } = useAuth();
   const { data: resourceItems, isLoading } = useQuery<Resource[]>({
     queryKey: ["/api/resources", "?limit=3"],
   });
