@@ -74,7 +74,7 @@ export default function ClassesPage() {
                   }`} 
                   data-testid={`card-class-${cls.id}`}
                 >
-                  <div className="relative h-48 bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
+                  <div className="relative aspect-video bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
                     {cls.thumbnail ? (
                       <img src={cls.thumbnail} alt={cls.title} className="w-full h-full object-cover rounded-t-xl" loading="lazy" />
                     ) : (

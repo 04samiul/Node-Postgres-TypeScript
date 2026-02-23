@@ -97,7 +97,7 @@ export default function CoursesPage() {
                 }`}
                 data-testid={`card-course-${course.id}`}
               >
-                <div className="relative h-48 bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-video bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
                   {course.bannerImage ? (
                     <img
                       src={course.bannerImage}
