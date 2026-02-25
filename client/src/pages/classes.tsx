@@ -24,6 +24,11 @@ export default function ClassesPage() {
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResponse<Class>>({
     queryKey: ["/api/classes", { limit, offset }],
+    queryFn: async () => {
+      const res = await fetch(`/api/classes?limit=${limit}&offset=${offset}`);
+      if (!res.ok) throw new Error("Failed to fetch classes");
+      return res.json();
+    }
   });
 
   useEffect(() => {
