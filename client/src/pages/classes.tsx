@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Calendar, Video, Play, Crown } from "lucide-react";
-import type { Class } from "@shared/schema";
+import { Calendar, Video, Play, Crown, Loader2 } from "lucide-react";
+import type { Class, PaginatedResponse } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
@@ -17,16 +17,27 @@ const FILTER_TAGS = ["All", "English", "Analytical Skill", "Problem Solving"];
 export default function ClassesPage() {
   useSEO({ title: "Video Classes", description: "Watch expert video classes for CU admission preparation. Covering English, Analytical Skills, and Problem Solving subjects.", path: "/classes" });
 
-  const [limit, setLimit] = useState(6);
-  const { data: classItems, isLoading } = useQuery<Class[]>({
-    queryKey: ["/api/classes"],
-  });
-  const { user } = useAuth();
+  const [offset, setOffset] = useState(0);
+  const [limit] = useState(6);
+  const [allClasses, setAllClasses] = useState<Class[]>([]);
   const [filter, setFilter] = useState("All");
 
-  const filtered = classItems?.filter((c) => filter === "All" || c.tag === filter) ?? [];
-  const displayed = filtered.slice(0, limit);
-  const hasMore = limit < filtered.length;
+  const { data, isLoading, isFetching } = useQuery<PaginatedResponse<Class>>({
+    queryKey: ["/api/classes", { limit, offset }],
+  });
+
+  useEffect(() => {
+    if (data?.items) {
+      if (offset === 0) {
+        setAllClasses(data.items);
+      } else {
+        setAllClasses(prev => [...prev, ...data.items]);
+      }
+    }
+  }, [data, offset]);
+
+  const filtered = allClasses.filter((c) => filter === "All" || c.tag === filter);
+  const hasMore = data?.hasMore;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8" data-testid="page-classes">
@@ -43,7 +54,8 @@ export default function ClassesPage() {
             size="sm"
             onClick={() => {
               setFilter(tag);
-              setLimit(6);
+              setOffset(0);
+              setAllClasses([]);
             }}
             data-testid={`filter-${tag.toLowerCase().replace(/\s/g, "-")}`}
           >
@@ -52,7 +64,7 @@ export default function ClassesPage() {
         ))}
       </div>
 
-      {isLoading ? (
+      {isLoading && offset === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
@@ -61,11 +73,11 @@ export default function ClassesPage() {
             </Card>
           ))}
         </div>
-      ) : displayed.length > 0 ? (
+      ) : filtered.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {displayed.map((cls, idx) => (
-              <motion.div key={cls.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="h-full">
+            {filtered.map((cls, idx) => (
+              <motion.div key={`${cls.id}-${idx}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (idx % limit) * 0.05 }} className="h-full">
                 <Card 
                   className={`overflow-visible flex flex-col h-full transition-all duration-300 ${
                     cls.access === "paid" 
@@ -109,21 +121,8 @@ export default function ClassesPage() {
                       <span>{format(new Date(cls.createdAt), "MMM dd, yyyy")}</span>
                     </div>
                   </CardContent>
-                  <CardFooter>
-                    {cls.access === "paid" && !user?.isPremium ? (
-                      <Button size="sm" variant="outline" disabled data-testid={`button-premium-${cls.id}`}>Premium Only</Button>
-                    ) : cls.access === "signin" && !user ? (
-                      <Link href="/auth"><Button size="sm" variant="outline" data-testid={`button-login-watch-${cls.id}`}>Login to Watch</Button></Link>
-                    ) : cls.videoUrl ? (
-                      <a href={cls.videoUrl} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" data-testid={`button-watch-${cls.id}`}>
-                          <Play className="h-3.5 w-3.5 mr-1" />
-                          Watch
-                        </Button>
-                      </a>
-                    ) : (
-                      <Button size="sm" variant="outline" disabled>No Video</Button>
-                    )}
+                  <CardFooter className="pt-0">
+                    <UserAction cls={cls} />
                   </CardFooter>
                 </Card>
               </motion.div>
@@ -134,10 +133,12 @@ export default function ClassesPage() {
               <Button 
                 variant="outline" 
                 size="lg" 
-                onClick={() => setLimit(prev => prev + 6)}
+                onClick={() => setOffset(prev => prev + limit)}
+                disabled={isFetching}
                 className="min-w-[200px]"
                 data-testid="button-load-more"
               >
+                {isFetching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Load More Classes
               </Button>
             </div>
@@ -151,4 +152,25 @@ export default function ClassesPage() {
       )}
     </div>
   );
+}
+
+function UserAction({ cls }: { cls: Class }) {
+  const { user } = useAuth();
+  if (cls.access === "paid" && !user?.isPremium) {
+    return <Button size="sm" variant="outline" disabled data-testid={`button-premium-${cls.id}`}>Premium Only</Button>;
+  }
+  if (cls.access === "signin" && !user) {
+    return <Link href="/auth"><Button size="sm" variant="outline" data-testid={`button-login-watch-${cls.id}`}>Login to Watch</Button></Link>;
+  }
+  if (cls.videoUrl) {
+    return (
+      <a href={cls.videoUrl} target="_blank" rel="noopener noreferrer">
+        <Button size="sm" data-testid={`button-watch-${cls.id}`}>
+          <Play className="h-3.5 w-3.5 mr-1" />
+          Watch
+        </Button>
+      </a>
+    );
+  }
+  return <Button size="sm" variant="outline" disabled>No Video</Button>;
 }

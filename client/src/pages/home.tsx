@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionHeader } from "@/components/section-header";
 import { Link } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { format } from "date-fns";
 import {
   BookOpen,
@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { Course, MockTest, Class, Resource, Notice, HeroBanner, Enrollment } from "@shared/schema";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSEO } from "@/hooks/use-seo";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -229,14 +229,17 @@ function CoursesSection() {
   const { toast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "100px" });
 
   const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["/api/courses", "?limit=3"],
+    enabled: isInView,
   });
 
   const { data: enrollments } = useQuery<Enrollment[]>({
     queryKey: ["/api/my-enrollments"],
-    enabled: !!user,
+    enabled: !!user && isInView,
   });
 
   const enrollmentMap: Record<number, string> = {};
@@ -264,7 +267,8 @@ function CoursesSection() {
 
   return (
     <motion.section
-      className="max-w-7xl mx-auto px-4 py-8"
+      ref={ref}
+      className="max-w-7xl mx-auto px-4 py-8 min-h-[300px]"
       variants={sectionVariants}
       initial="hidden"
       whileInView="visible"
@@ -422,13 +426,18 @@ function CoursesSection() {
 
 function MockTestsSection() {
   const { user } = useAuth();
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "100px" });
+
   const { data: mockTests, isLoading } = useQuery<MockTest[]>({
     queryKey: ["/api/mock-tests", "?limit=3"],
+    enabled: isInView,
   });
 
   return (
     <motion.section
-      className="max-w-7xl mx-auto px-4 py-8"
+      ref={ref}
+      className="max-w-7xl mx-auto px-4 py-8 min-h-[250px]"
       variants={sectionVariants}
       initial="hidden"
       whileInView="visible"
@@ -524,13 +533,18 @@ function MockTestsSection() {
 
 function ClassesSection() {
   const { user } = useAuth();
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "100px" });
+
   const { data: classItems, isLoading } = useQuery<Class[]>({
     queryKey: ["/api/classes", "?limit=3"],
+    enabled: isInView,
   });
 
   return (
     <motion.section
-      className="max-w-7xl mx-auto px-4 py-8"
+      ref={ref}
+      className="max-w-7xl mx-auto px-4 py-8 min-h-[300px]"
       variants={sectionVariants}
       initial="hidden"
       whileInView="visible"

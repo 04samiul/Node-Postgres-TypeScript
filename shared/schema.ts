@@ -202,6 +202,14 @@ export const insertNoticeSchema = createInsertSchema(notices).omit({
 export type InsertNotice = z.infer<typeof insertNoticeSchema>;
 export type Notice = typeof notices.$inferSelect;
 
+export type PaginatedResponse<T> = {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
 // ============ TEAM MEMBERS ============
 export const teamMembers = pgTable("team_members", {
   id: serial("id").primaryKey(),

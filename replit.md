@@ -20,6 +20,7 @@ Crack-CU is a mobile-responsive ed-tech platform for Chittagong University admis
 - Feb 2026: Student profile edit (all fields except WhatsApp which requires admin)
 - Feb 2026: Courses & classes thumbnail ratio changed to 16:9 (aspect-video)
 - Feb 2026: Persistent timer rules - admin sets 1st/2nd timer by year, auto-applies to existing and future users via siteSettings
+- Feb 2026: Pagination and "Load More" implemented for Classes page (6 items per page)
 - Feb 2026: SEO optimization - dynamic page titles/meta via useSEO hook, OG/Twitter cards, JSON-LD structured data, robots.txt, sitemap.xml, image lazy loading
 - Feb 2026: Full migration to Supabase - database (SUPABASE_DATABASE_URL) and file storage (Supabase Storage bucket)
 - Database schema: 11 tables via Drizzle ORM + PostgreSQL (Supabase)
