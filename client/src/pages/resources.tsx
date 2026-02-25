@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { Calendar, Download, FileText, Crown } from "lucide-react";

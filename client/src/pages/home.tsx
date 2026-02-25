@@ -297,7 +297,7 @@ function CoursesSection() {
               }`}
               data-testid={`card-course-${course.id}`}
             >
-              <div className="relative aspect-video bg-muted rounded-t-xl flex items-center justify-center">
+              <div className="relative aspect-video bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
                 {course.bannerImage ? (
                   <img
                     src={course.bannerImage}
@@ -562,7 +562,7 @@ function ClassesSection() {
               }`} 
               data-testid={`card-class-${cls.id}`}
             >
-              <div className="relative aspect-video bg-muted rounded-t-xl flex items-center justify-center">
+              <div className="relative aspect-video bg-muted rounded-t-xl flex items-center justify-center overflow-hidden">
                 {cls.thumbnail ? (
                   <img
                     src={cls.thumbnail}
