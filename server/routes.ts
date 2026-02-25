@@ -328,7 +328,8 @@ export async function registerRoutes(
   app.get("/api/classes", async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = parseInt(req.query.offset as string) || 0;
-    const { items, total } = await storage.getLatestClasses(limit, offset);
+    const tag = req.query.tag as string;
+    const { items, total } = await storage.getLatestClasses(limit, offset, tag);
     res.json({
       items,
       total,

@@ -23,9 +23,9 @@ export default function ClassesPage() {
   const [filter, setFilter] = useState("All");
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResponse<Class>>({
-    queryKey: ["/api/classes", { limit, offset }],
+    queryKey: ["/api/classes", { limit, offset, filter }],
     queryFn: async () => {
-      const res = await fetch(`/api/classes?limit=${limit}&offset=${offset}`);
+      const res = await fetch(`/api/classes?limit=${limit}&offset=${offset}${filter !== "All" ? `&tag=${encodeURIComponent(filter)}` : ""}`);
       if (!res.ok) throw new Error("Failed to fetch classes");
       return res.json();
     }
@@ -41,7 +41,7 @@ export default function ClassesPage() {
     }
   }, [data, offset]);
 
-  const filtered = allClasses.filter((c) => filter === "All" || c.tag === filter);
+  const filtered = allClasses;
   const hasMore = data?.hasMore;
 
   return (

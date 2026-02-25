@@ -38,7 +38,7 @@ export interface IStorage {
   getMockTest(id: number): Promise<MockTest | undefined>;
   createMockTest(data: InsertMockTest): Promise<MockTest>;
 
-  getLatestClasses(limit: number, offset?: number): Promise<{ items: Class[], total: number }>;
+  getLatestClasses(limit: number, offset?: number, tag?: string): Promise<{ items: Class[], total: number }>;
   getAllClasses(): Promise<Class[]>;
   createClass(data: InsertClass): Promise<Class>;
 
@@ -182,9 +182,22 @@ export class DatabaseStorage implements IStorage {
     return test;
   }
 
-  async getLatestClasses(limit: number, offset: number = 0): Promise<{ items: Class[], total: number }> {
-    const [totalCount] = await db.select({ count: count() }).from(classes).where(eq(classes.isVisible, true));
-    const items = await db.select().from(classes).where(eq(classes.isVisible, true)).orderBy(desc(classes.createdAt)).limit(limit).offset(offset);
+  async getLatestClasses(limit: number, offset: number = 0, tag?: string): Promise<{ items: Class[], total: number }> {
+    const query = db.select().from(classes).where(
+      and(
+        eq(classes.isVisible, true),
+        tag && tag !== "All" ? eq(classes.tag, tag) : undefined
+      )
+    );
+
+    const [totalCount] = await db.select({ count: count() }).from(classes).where(
+      and(
+        eq(classes.isVisible, true),
+        tag && tag !== "All" ? eq(classes.tag, tag) : undefined
+      )
+    );
+
+    const items = await query.orderBy(desc(classes.createdAt)).limit(limit).offset(offset);
     return { items, total: Number(totalCount.count) };
   }
 
