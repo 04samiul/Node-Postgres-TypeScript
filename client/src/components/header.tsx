@@ -60,7 +60,11 @@ export function Header() {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`text-sm ${location === item.href ? "bg-muted font-medium" : "text-muted-foreground"}`}
+                className={`text-sm transition-all duration-200 relative ${
+                  location === item.href 
+                    ? "text-primary font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary" 
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
                 data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, "-")}`}
               >
                 {item.label}

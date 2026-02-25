@@ -290,7 +290,7 @@ function CoursesSection() {
           {courses.map((course) => (
             <Card 
               key={course.id} 
-              className={`overflow-visible flex flex-col transition-all duration-300 ${
+              className={`overflow-visible flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
                 course.price > 0 
                   ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm hover:shadow-amber-100 dark:hover:shadow-amber-900/20" 
                   : ""
@@ -456,7 +456,7 @@ function MockTestsSection() {
             return (
               <Card 
                 key={test.id} 
-                className={`flex flex-col transition-all duration-300 ${
+                className={`flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
                   test.access === "paid" 
                     ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
                     : ""
@@ -555,7 +555,7 @@ function ClassesSection() {
           {classItems.map((cls) => (
             <Card 
               key={cls.id} 
-              className={`overflow-visible flex flex-col transition-all duration-300 ${
+              className={`overflow-visible flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
                 cls.access === "paid" 
                   ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
                   : ""
