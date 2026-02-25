@@ -536,10 +536,16 @@ function ClassesSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "100px" });
 
-  const { data: classItems, isLoading } = useQuery<Class[]>({
+  const { data, isLoading } = useQuery<PaginatedResponse<Class>>({
     queryKey: ["/api/classes", "?limit=3"],
     enabled: isInView,
+    queryFn: async () => {
+      const res = await fetch("/api/classes?limit=3");
+      if (!res.ok) throw new Error("Failed to fetch classes");
+      return res.json();
+    }
   });
+  const classItems = data?.items ?? [];
 
   return (
     <motion.section
