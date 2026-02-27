@@ -43,7 +43,7 @@ export function useSEO({ title, description, path, ogType = "website", noIndex =
     const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
     document.title = fullTitle;
 
-    const baseUrl = getBaseUrl();
+    const baseUrl = "https://crack-cu.onrender.com";
     const ogImage = `${baseUrl}/favicon.png`;
 
     setMeta("description", description);
