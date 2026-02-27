@@ -44,15 +44,18 @@ export function useSEO({ title, description, path, ogType = "website", noIndex =
     document.title = fullTitle;
 
     const baseUrl = getBaseUrl();
+    const ogImage = `${baseUrl}/favicon.png`;
 
     setMeta("description", description);
     setMeta("og:title", fullTitle, true);
     setMeta("og:description", description, true);
     setMeta("og:type", ogType, true);
     setMeta("og:site_name", SITE_NAME, true);
+    setMeta("og:image", ogImage, true);
     setMeta("twitter:card", "summary_large_image");
     setMeta("twitter:title", fullTitle);
     setMeta("twitter:description", description);
+    setMeta("twitter:image", ogImage);
 
     if (path) {
       const canonicalUrl = `${baseUrl}${path}`;
