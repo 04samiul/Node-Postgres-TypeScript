@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
 
-const FILTER_TAGS = ["All", "English", "Analytical Skill", "Problem Solving"];
+const FILTER_TAGS = ["All", "Free", "English", "Analytical Skill", "Problem Solving"];
 
 export default function ClassesPage() {
   useSEO({ title: "Video Classes", description: "Watch expert video classes for CU admission preparation. Covering English, Analytical Skills, and Problem Solving subjects.", path: "/classes" });
@@ -26,7 +26,10 @@ export default function ClassesPage() {
   const { data, isLoading, isFetching } = useQuery<PaginatedResponse<Class>>({
     queryKey: ["/api/classes", { limit, offset, filter }],
     queryFn: async () => {
-      const res = await fetch(`/api/classes?limit=${limit}&offset=${offset}${filter !== "All" ? `&tag=${encodeURIComponent(filter)}` : ""}`);
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      if (filter === "Free") { params.set("free", "true"); }
+      else if (filter !== "All") { params.set("tag", filter); }
+      const res = await fetch(`/api/classes?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch classes");
       return res.json();
     }

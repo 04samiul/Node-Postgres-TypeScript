@@ -13,7 +13,7 @@ import {
   users, heroBanners, courses, mockTests, mockSubmissions, classes, resources, notices, teamMembers, enrollments, siteSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, and } from "drizzle-orm";
+import { eq, desc, count, and, or } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -39,7 +39,7 @@ export interface IStorage {
   createMockTest(data: InsertMockTest): Promise<MockTest>;
   getMockTestsByCourseId(courseId: number): Promise<MockTest[]>;
 
-  getLatestClasses(limit: number, offset?: number, tag?: string): Promise<{ items: Class[], total: number }>;
+  getLatestClasses(limit: number, offset?: number, tag?: string, freeOnly?: boolean): Promise<{ items: Class[], total: number }>;
   getAllClasses(): Promise<Class[]>;
   createClass(data: InsertClass): Promise<Class>;
   getClassesByCourseId(courseId: number): Promise<Class[]>;
@@ -189,11 +189,12 @@ export class DatabaseStorage implements IStorage {
     return test;
   }
 
-  async getLatestClasses(limit: number, offset: number = 0, tag?: string): Promise<{ items: Class[], total: number }> {
+  async getLatestClasses(limit: number, offset: number = 0, tag?: string, freeOnly?: boolean): Promise<{ items: Class[], total: number }> {
     const conditions = [
       eq(classes.isVisible, true),
     ];
     if (tag && tag !== "All") conditions.push(eq(classes.tag, tag));
+    if (freeOnly) conditions.push(or(eq(classes.access, "all"), eq(classes.access, "signin"))!);
 
     const query = db.select().from(classes).where(and(...conditions));
 

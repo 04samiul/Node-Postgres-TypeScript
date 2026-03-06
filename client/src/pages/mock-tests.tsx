@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
 
-const FILTER_TAGS = ["All", "CU Mock", "English", "Analytical Skill", "Problem Solving"];
+const FILTER_TAGS = ["All", "Free", "CU Mock", "English", "Analytical Skill", "Problem Solving"];
 
 function CountdownTimer({ targetDate, onReached }: { targetDate: Date; onReached?: () => void }) {
   const [timeLeft, setTimeLeft] = useState(getTimeRemaining(targetDate));
@@ -67,7 +67,11 @@ export default function MockTestsPage() {
 
   const enrolledCourseIds = new Set(enrollments?.map(e => e.courseId) ?? []);
 
-  const filtered = mockTests?.filter((t) => filter === "All" || t.tag === filter) ?? [];
+  const filtered = mockTests?.filter((t) => {
+    if (filter === "All") return true;
+    if (filter === "Free") return t.access === "all" || t.access === "signin";
+    return t.tag === filter;
+  }) ?? [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8" data-testid="page-mock-tests">

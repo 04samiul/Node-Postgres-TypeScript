@@ -401,7 +401,8 @@ export async function registerRoutes(
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = parseInt(req.query.offset as string) || 0;
     const tag = req.query.tag as string;
-    const { items, total } = await storage.getLatestClasses(limit, offset, tag);
+    const freeOnly = req.query.free === "true";
+    const { items, total } = await storage.getLatestClasses(limit, offset, tag, freeOnly);
     res.json({
       items,
       total,

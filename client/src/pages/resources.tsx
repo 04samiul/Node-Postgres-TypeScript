@@ -12,7 +12,7 @@ import type { Resource, Enrollment } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useSEO } from "@/hooks/use-seo";
 
-const FILTER_TAGS = ["All", "CU QB", "English", "Analytical Skill", "Problem Solving"];
+const FILTER_TAGS = ["All", "Free", "CU QB", "English", "Analytical Skill", "Problem Solving"];
 
 export default function ResourcesPage() {
   useSEO({ title: "Study Resources", description: "Download study materials, question banks, and preparation resources for Chittagong University admission test.", path: "/resources" });
@@ -30,7 +30,11 @@ export default function ResourcesPage() {
 
   const enrolledCourseIds = new Set(enrollments?.map(e => e.courseId) ?? []);
 
-  const filtered = resourceItems?.filter((r) => filter === "All" || r.tag === filter) ?? [];
+  const filtered = resourceItems?.filter((r) => {
+    if (filter === "All") return true;
+    if (filter === "Free") return r.access === "all" || r.access === "signin";
+    return r.tag === filter;
+  }) ?? [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8" data-testid="page-resources">
