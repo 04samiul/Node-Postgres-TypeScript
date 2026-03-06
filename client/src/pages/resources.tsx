@@ -7,8 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Calendar, Download, FileText, Crown } from "lucide-react";
-import type { Resource } from "@shared/schema";
+import { Calendar, Download, FileText, Crown, BookOpen, Lock } from "lucide-react";
+import type { Resource, Enrollment } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useSEO } from "@/hooks/use-seo";
 
@@ -22,6 +22,13 @@ export default function ResourcesPage() {
   });
   const { user } = useAuth();
   const [filter, setFilter] = useState("All");
+
+  const { data: enrollments } = useQuery<Enrollment[]>({
+    queryKey: ["/api/my-enrollments"],
+    enabled: !!user,
+  });
+
+  const enrolledCourseIds = new Set(enrollments?.map(e => e.courseId) ?? []);
 
   const filtered = resourceItems?.filter((r) => filter === "All" || r.tag === filter) ?? [];
 
@@ -58,9 +65,11 @@ export default function ResourcesPage() {
             <motion.div key={resource.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="h-full">
               <Card 
                 className={`flex flex-col h-full transition-all duration-300 ${
-                  resource.access === "paid" 
-                    ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
-                    : ""
+                  resource.courseId
+                    ? "border-blue-200 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background shadow-sm"
+                    : resource.access === "paid" 
+                      ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                      : ""
                 }`} 
                 data-testid={`card-resource-${resource.id}`}
               >
@@ -71,12 +80,17 @@ export default function ResourcesPage() {
                       {resource.title}
                     </CardTitle>
                     <div className="flex gap-1 flex-wrap">
-                      {resource.access === "paid" && (
+                      {resource.courseId ? (
+                        <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-sm">
+                          <BookOpen className="h-3 w-3 mr-1" />
+                          Course
+                        </Badge>
+                      ) : resource.access === "paid" ? (
                         <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm">
                           <Crown className="h-3 w-3 mr-1" />
                           Premium
                         </Badge>
-                      )}
+                      ) : null}
                       <Badge variant="secondary">{resource.tag}</Badge>
                     </div>
                   </div>
@@ -89,16 +103,7 @@ export default function ResourcesPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  {resource.access === "paid" && !user?.isPremium ? (
-                    <Button size="sm" variant="outline" disabled>Premium Only</Button>
-                  ) : resource.access === "signin" && !user ? (
-                    <Link href="/auth"><Button size="sm" variant="outline">Login to Download</Button></Link>
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={() => window.open(resource.fileUrl, "_blank")} data-testid={`button-download-${resource.id}`}>
-                      <Download className="h-3.5 w-3.5 mr-1" />
-                      Download
-                    </Button>
-                  )}
+                  <ResourceAction resource={resource} enrolledCourseIds={enrolledCourseIds} />
                 </CardFooter>
               </Card>
             </motion.div>
@@ -111,5 +116,38 @@ export default function ResourcesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function ResourceAction({ resource, enrolledCourseIds }: { resource: Resource; enrolledCourseIds: Set<number> }) {
+  const { user } = useAuth();
+
+  if (resource.courseId) {
+    if (!user) {
+      return <Link href="/auth"><Button size="sm" variant="outline"><Lock className="h-3.5 w-3.5 mr-1" />Login to Access</Button></Link>;
+    }
+    if (!enrolledCourseIds.has(resource.courseId)) {
+      return (
+        <Link href={`/courses/${resource.courseId}`}>
+          <Button size="sm" variant="outline" data-testid={`button-enroll-access-${resource.id}`}>
+            <Lock className="h-3.5 w-3.5 mr-1" />
+            Enroll to Access
+          </Button>
+        </Link>
+      );
+    }
+  }
+
+  if (resource.access === "paid" && !user?.isPremium && !resource.courseId) {
+    return <Button size="sm" variant="outline" disabled>Premium Only</Button>;
+  }
+  if (resource.access === "signin" && !user) {
+    return <Link href="/auth"><Button size="sm" variant="outline">Login to Download</Button></Link>;
+  }
+  return (
+    <Button variant="outline" size="sm" onClick={() => window.open(resource.fileUrl, "_blank")} data-testid={`button-download-${resource.id}`}>
+      <Download className="h-3.5 w-3.5 mr-1" />
+      Download
+    </Button>
   );
 }

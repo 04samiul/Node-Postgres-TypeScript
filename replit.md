@@ -63,8 +63,9 @@ Crack-CU is a mobile-responsive ed-tech platform for Chittagong University admis
 
 ## Course Content System
 - Classes, Resources, and MockTests have an optional `courseId` column
-- Content with `courseId` set belongs to that specific course and only appears inside the course detail page
-- Content without `courseId` (null) is standalone and appears on the general Classes/Resources/Mock Tests pages
+- All content (with or without courseId) appears on general Classes/Resources/Mock Tests pages
+- Content with `courseId` shows a blue "Course" badge; access is gated — only enrolled students can use it, non-enrolled see "Enroll to Access" linking to the course
+- Content without `courseId` (null) is standalone with normal access rules (free/signin/paid)
 - Admin can assign content to a course via a dropdown when creating/editing
 - Course detail page (/courses/:id) shows tabbed sections for classes, resources, and mock tests
 - Enrolled students can access course content; non-enrolled see locked state with "Enroll to Access"

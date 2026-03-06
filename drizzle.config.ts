@@ -1,14 +1,20 @@
 import { defineConfig } from "drizzle-kit";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
+const dbUrl = process.env.SUPABASE_URL || process.env.DATABASE_URL;
+
+if (!dbUrl) {
+  throw new Error("SUPABASE_URL or DATABASE_URL must be set");
 }
+
+const connectionUrl = dbUrl.includes('?') 
+  ? `${dbUrl}&sslmode=no-verify` 
+  : `${dbUrl}?sslmode=no-verify`;
 
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: connectionUrl,
   },
 });

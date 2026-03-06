@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { Clock, Play, Calendar, FileText, Crown } from "lucide-react";
-import type { MockTest } from "@shared/schema";
+import { Clock, Play, Calendar, FileText, Crown, BookOpen, Lock } from "lucide-react";
+import type { MockTest, Enrollment } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
@@ -60,6 +60,13 @@ export default function MockTestsPage() {
   const [filter, setFilter] = useState("All");
   const [, setTick] = useState(0);
 
+  const { data: enrollments } = useQuery<Enrollment[]>({
+    queryKey: ["/api/my-enrollments"],
+    enabled: !!user,
+  });
+
+  const enrolledCourseIds = new Set(enrollments?.map(e => e.courseId) ?? []);
+
   const filtered = mockTests?.filter((t) => filter === "All" || t.tag === filter) ?? [];
 
   return (
@@ -98,9 +105,11 @@ export default function MockTestsPage() {
               <motion.div key={test.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="h-full">
                 <Card 
                   className={`flex flex-col h-full transition-all duration-300 ${
-                    test.access === "paid" 
-                      ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
-                      : ""
+                    test.courseId
+                      ? "border-blue-200 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background shadow-sm"
+                      : test.access === "paid" 
+                        ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                        : ""
                   }`} 
                   data-testid={`card-mocktest-${test.id}`}
                 >
@@ -110,12 +119,17 @@ export default function MockTestsPage() {
                         {test.title}
                       </CardTitle>
                       <div className="flex gap-1 flex-wrap">
-                        {test.access === "paid" && (
+                        {test.courseId ? (
+                          <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-sm">
+                            <BookOpen className="h-3 w-3 mr-1" />
+                            Course
+                          </Badge>
+                        ) : test.access === "paid" ? (
                           <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm">
                             <Crown className="h-3 w-3 mr-1" />
                             Premium
                           </Badge>
-                        )}
+                        ) : null}
                         <Badge variant="secondary">{test.tag}</Badge>
                       </div>
                     </div>
@@ -134,27 +148,7 @@ export default function MockTestsPage() {
                     )}
                   </CardContent>
                   <CardFooter>
-                    {isUpcoming ? (
-                      <Button variant="outline" size="sm" disabled>
-                        <Clock className="h-3.5 w-3.5 mr-1" />
-                        Upcoming
-                      </Button>
-                    ) : (test.access === "signin" || test.access === "paid") && !user ? (
-                      <Link href="/auth">
-                        <Button size="sm">Sign in to Start</Button>
-                      </Link>
-                    ) : test.access === "paid" && !user?.isPremium ? (
-                      <Button size="sm" variant="outline" disabled data-testid={`button-premium-${test.id}`}>
-                        Premium Only
-                      </Button>
-                    ) : (
-                      <Link href={`/mock-tests/${test.id}`}>
-                        <Button size="sm" data-testid={`button-start-${test.id}`}>
-                          <Play className="h-3.5 w-3.5 mr-1" />
-                          Start Exam
-                        </Button>
-                      </Link>
-                    )}
+                    <MockTestAction test={test} isUpcoming={isUpcoming} enrolledCourseIds={enrolledCourseIds} />
                   </CardFooter>
                 </Card>
               </motion.div>
@@ -168,5 +162,53 @@ export default function MockTestsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function MockTestAction({ test, isUpcoming, enrolledCourseIds }: { test: MockTest; isUpcoming: boolean; enrolledCourseIds: Set<number> }) {
+  const { user } = useAuth();
+
+  if (isUpcoming) {
+    return (
+      <Button variant="outline" size="sm" disabled>
+        <Clock className="h-3.5 w-3.5 mr-1" />
+        Upcoming
+      </Button>
+    );
+  }
+
+  if (test.courseId) {
+    if (!user) {
+      return <Link href="/auth"><Button size="sm" variant="outline"><Lock className="h-3.5 w-3.5 mr-1" />Login to Access</Button></Link>;
+    }
+    if (!enrolledCourseIds.has(test.courseId)) {
+      return (
+        <Link href={`/courses/${test.courseId}`}>
+          <Button size="sm" variant="outline" data-testid={`button-enroll-access-${test.id}`}>
+            <Lock className="h-3.5 w-3.5 mr-1" />
+            Enroll to Access
+          </Button>
+        </Link>
+      );
+    }
+  }
+
+  if ((test.access === "signin" || test.access === "paid") && !user) {
+    return <Link href="/auth"><Button size="sm">Sign in to Start</Button></Link>;
+  }
+  if (test.access === "paid" && !user?.isPremium && !test.courseId) {
+    return (
+      <Button size="sm" variant="outline" disabled data-testid={`button-premium-${test.id}`}>
+        Premium Only
+      </Button>
+    );
+  }
+  return (
+    <Link href={`/mock-tests/${test.id}`}>
+      <Button size="sm" data-testid={`button-start-${test.id}`}>
+        <Play className="h-3.5 w-3.5 mr-1" />
+        Start Exam
+      </Button>
+    </Link>
   );
 }

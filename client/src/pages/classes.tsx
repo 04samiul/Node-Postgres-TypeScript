@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Calendar, Video, Play, Crown, Loader2 } from "lucide-react";
-import type { Class, PaginatedResponse } from "@shared/schema";
+import { Calendar, Video, Play, Crown, Loader2, BookOpen, Lock } from "lucide-react";
+import type { Class, PaginatedResponse, Enrollment } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
@@ -21,6 +21,7 @@ export default function ClassesPage() {
   const [limit] = useState(6);
   const [allClasses, setAllClasses] = useState<Class[]>([]);
   const [filter, setFilter] = useState("All");
+  const { user } = useAuth();
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResponse<Class>>({
     queryKey: ["/api/classes", { limit, offset, filter }],
@@ -30,6 +31,13 @@ export default function ClassesPage() {
       return res.json();
     }
   });
+
+  const { data: enrollments } = useQuery<Enrollment[]>({
+    queryKey: ["/api/my-enrollments"],
+    enabled: !!user,
+  });
+
+  const enrolledCourseIds = new Set(enrollments?.map(e => e.courseId) ?? []);
 
   useEffect(() => {
     if (data?.items) {
@@ -85,9 +93,11 @@ export default function ClassesPage() {
               <motion.div key={`${cls.id}-${idx}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (idx % limit) * 0.05 }} className="h-full">
                 <Card 
                   className={`overflow-visible flex flex-col h-full transition-all duration-300 ${
-                    cls.access === "paid" 
-                      ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
-                      : ""
+                    cls.courseId
+                      ? "border-blue-200 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background shadow-sm"
+                      : cls.access === "paid" 
+                        ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                        : ""
                   }`} 
                   data-testid={`card-class-${cls.id}`}
                 >
@@ -97,14 +107,21 @@ export default function ClassesPage() {
                     ) : (
                       <Video className="h-12 w-12 text-muted-foreground/40" />
                     )}
-                    {cls.access === "paid" && (
+                    {cls.courseId ? (
+                      <div className="absolute top-3 right-3 z-10">
+                        <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-sm">
+                          <BookOpen className="h-3 w-3 mr-1" />
+                          Course
+                        </Badge>
+                      </div>
+                    ) : cls.access === "paid" ? (
                       <div className="absolute top-3 right-3 z-10">
                         <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-sm scale-110">
                           <Crown className="h-3 w-3 mr-1" />
                           Premium
                         </Badge>
                       </div>
-                    )}
+                    ) : null}
                     <div className="absolute inset-0 bg-black/20 rounded-t-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                       <div className="h-12 w-12 rounded-full bg-white/90 flex items-center justify-center">
                         <Play className="h-5 w-5 text-foreground ml-0.5" />
@@ -127,7 +144,7 @@ export default function ClassesPage() {
                     </div>
                   </CardContent>
                   <CardFooter className="pt-0">
-                    <UserAction cls={cls} />
+                    <UserAction cls={cls} enrolledCourseIds={enrolledCourseIds} />
                   </CardFooter>
                 </Card>
               </motion.div>
@@ -159,9 +176,26 @@ export default function ClassesPage() {
   );
 }
 
-function UserAction({ cls }: { cls: Class }) {
+function UserAction({ cls, enrolledCourseIds }: { cls: Class; enrolledCourseIds: Set<number> }) {
   const { user } = useAuth();
-  if (cls.access === "paid" && !user?.isPremium) {
+
+  if (cls.courseId) {
+    if (!user) {
+      return <Link href="/auth"><Button size="sm" variant="outline" data-testid={`button-login-watch-${cls.id}`}><Lock className="h-3.5 w-3.5 mr-1" />Login to Access</Button></Link>;
+    }
+    if (!enrolledCourseIds.has(cls.courseId)) {
+      return (
+        <Link href={`/courses/${cls.courseId}`}>
+          <Button size="sm" variant="outline" data-testid={`button-enroll-access-${cls.id}`}>
+            <Lock className="h-3.5 w-3.5 mr-1" />
+            Enroll to Access
+          </Button>
+        </Link>
+      );
+    }
+  }
+
+  if (cls.access === "paid" && !user?.isPremium && !cls.courseId) {
     return <Button size="sm" variant="outline" disabled data-testid={`button-premium-${cls.id}`}>Premium Only</Button>;
   }
   if (cls.access === "signin" && !user) {
