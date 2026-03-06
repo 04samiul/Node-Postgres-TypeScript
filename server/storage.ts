@@ -13,7 +13,7 @@ import {
   users, heroBanners, courses, mockTests, mockSubmissions, classes, resources, notices, teamMembers, enrollments, siteSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, and, or } from "drizzle-orm";
+import { eq, desc, count, and, or, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -194,7 +194,10 @@ export class DatabaseStorage implements IStorage {
       eq(classes.isVisible, true),
     ];
     if (tag && tag !== "All") conditions.push(eq(classes.tag, tag));
-    if (freeOnly) conditions.push(or(eq(classes.access, "all"), eq(classes.access, "signin"))!);
+    if (freeOnly) {
+      conditions.push(or(eq(classes.access, "all"), eq(classes.access, "signin"))!);
+      conditions.push(sql`${classes.courseId} IS NULL`);
+    }
 
     const query = db.select().from(classes).where(and(...conditions));
 

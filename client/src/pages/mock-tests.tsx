@@ -69,7 +69,7 @@ export default function MockTestsPage() {
 
   const filtered = mockTests?.filter((t) => {
     if (filter === "All") return true;
-    if (filter === "Free") return t.access === "all" || t.access === "signin";
+    if (filter === "Free") return (t.access === "all" || t.access === "signin") && !t.courseId;
     return t.tag === filter;
   }) ?? [];
 

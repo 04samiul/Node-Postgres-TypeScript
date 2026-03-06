@@ -32,7 +32,7 @@ export default function ResourcesPage() {
 
   const filtered = resourceItems?.filter((r) => {
     if (filter === "All") return true;
-    if (filter === "Free") return r.access === "all" || r.access === "signin";
+    if (filter === "Free") return (r.access === "all" || r.access === "signin") && !r.courseId;
     return r.tag === filter;
   }) ?? [];
 
