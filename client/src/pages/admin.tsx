@@ -1930,7 +1930,7 @@ function BannersTab() {
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate({ ...formData, isVisible: formData.isVisible ?? true, sortOrder: Number(formData.sortOrder) || 0 }); }} className="space-y-3">
               <div>
                 <Label className="text-xs">Title</Label>
-                <Input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+                <Input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Optional" />
               </div>
               <div>
                 <Label className="text-xs">Description</Label>
@@ -1975,7 +1975,7 @@ function BannersTab() {
                 <div className="flex gap-3 min-w-0">
                   {b.imageUrl && <img src={b.imageUrl} alt="" className="w-20 h-12 rounded-md object-cover shrink-0" />}
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{b.title}</p>
+                    <p className="text-sm font-medium truncate">{b.title || "(No title)"}</p>
                     <p className="text-xs text-muted-foreground">Order: {b.sortOrder}</p>
                   </div>
                 </div>

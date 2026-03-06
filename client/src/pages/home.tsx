@@ -98,8 +98,8 @@ function HeroSection() {
 
   if (isLoading) {
     return (
-      <div className="relative w-full min-h-[300px] md:min-h-[400px]" data-testid="hero-skeleton">
-        <Skeleton className="w-full h-full min-h-[300px] md:min-h-[400px] rounded-none" />
+      <div className="relative w-full aspect-video" data-testid="hero-skeleton">
+        <Skeleton className="w-full h-full rounded-none" />
       </div>
     );
   }
@@ -107,14 +107,14 @@ function HeroSection() {
   if (!hasBanners) {
     return (
       <div
-        className="relative w-full min-h-[300px] md:min-h-[400px] flex items-center justify-center"
+        className="relative w-full aspect-video flex items-center justify-center"
         style={{ background: "linear-gradient(135deg, #eb202a 0%, #1a1a2e 100%)" }}
         data-testid="hero-default"
       >
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
         <div className="relative z-10 text-center px-4">
           <motion.h1
-            className="text-3xl md:text-5xl font-bold text-white mb-4"
+            className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-4 whitespace-nowrap"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -123,7 +123,7 @@ function HeroSection() {
             Don't Just Study, Crack It!
           </motion.h1>
           <motion.p
-            className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto"
+            className="text-sm sm:text-lg md:text-xl text-white/80 max-w-2xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -139,7 +139,7 @@ function HeroSection() {
   const currentBanner = visibleBanners[currentIndex];
 
   return (
-    <div className="relative w-full min-h-[300px] md:min-h-[400px] overflow-hidden" data-testid="hero-carousel">
+    <div className="relative w-full aspect-video overflow-hidden bg-black" data-testid="hero-carousel">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentBanner.id}
@@ -152,39 +152,45 @@ function HeroSection() {
           {currentBanner.imageUrl ? (
             <img
               src={currentBanner.imageUrl}
-              alt={currentBanner.title}
-              className="w-full h-full object-cover min-h-[300px] md:min-h-[400px]"
+              alt={currentBanner.title || "Banner"}
+              className="w-full h-full object-contain"
               data-testid={`hero-image-${currentBanner.id}`}
             />
           ) : (
             <div
-              className="w-full h-full min-h-[300px] md:min-h-[400px]"
+              className="w-full h-full"
               style={{ background: "linear-gradient(135deg, #eb202a 0%, #1a1a2e 100%)" }}
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
-            <motion.h2
-              className="text-2xl md:text-4xl font-bold text-white mb-2"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              data-testid={`hero-banner-title-${currentBanner.id}`}
-            >
-              {currentBanner.title}
-            </motion.h2>
-            {currentBanner.description && (
-              <motion.p
-                className="text-sm md:text-base text-white/80 max-w-xl"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                data-testid={`hero-banner-desc-${currentBanner.id}`}
-              >
-                {currentBanner.description}
-              </motion.p>
-            )}
-          </div>
+          {(currentBanner.title || currentBanner.description) && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-10">
+                {currentBanner.title && (
+                  <motion.h2
+                    className="text-xl md:text-4xl font-bold text-white mb-1"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    data-testid={`hero-banner-title-${currentBanner.id}`}
+                  >
+                    {currentBanner.title}
+                  </motion.h2>
+                )}
+                {currentBanner.description && (
+                  <motion.p
+                    className="text-sm md:text-base text-white/80 max-w-xl"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    data-testid={`hero-banner-desc-${currentBanner.id}`}
+                  >
+                    {currentBanner.description}
+                  </motion.p>
+                )}
+              </div>
+            </>
+          )}
         </motion.div>
       </AnimatePresence>
 

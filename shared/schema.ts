@@ -50,7 +50,7 @@ export type User = typeof users.$inferSelect;
 // ============ HERO BANNERS ============
 export const heroBanners = pgTable("hero_banners", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
+  title: text("title"),
   description: text("description"),
   imageUrl: text("image_url"),
   linkUrl: text("link_url"),
