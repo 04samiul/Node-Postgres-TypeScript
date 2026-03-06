@@ -593,6 +593,19 @@ function CoursesTab() {
     },
   });
 
+  const dismissEnrollment = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/admin/enrollments/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+      toast({ title: "Enrollment dismissed" });
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const data = { ...formData };
@@ -622,10 +635,11 @@ function CoursesTab() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-2">
-              {["pending", "approved", "declined", "all"].map((f) => (
+              {["pending", "approved", "restricted", "declined", "all"].map((f) => (
                 <Button key={f} size="sm" variant={enrollFilter === f ? "default" : "outline"} onClick={() => setEnrollFilter(f)} data-testid={`filter-enroll-${f}`}>
                   {f === "pending" ? `Pending (${courseEnrollments.filter((e: any) => e.status === "pending").length})` :
                    f === "approved" ? `Enrolled (${courseEnrollments.filter((e: any) => e.status === "approved").length})` :
+                   f === "restricted" ? `Restricted (${courseEnrollments.filter((e: any) => e.status === "restricted").length})` :
                    f === "declined" ? `Declined (${courseEnrollments.filter((e: any) => e.status === "declined").length})` : "All"}
                 </Button>
               ))}
@@ -643,27 +657,54 @@ function CoursesTab() {
                             <span className="text-xs text-muted-foreground">{idx + 1}.</span>
                             <p className="text-sm font-medium">{e.userFullName}</p>
                             <Badge variant="secondary" className="text-xs">@{e.userName}</Badge>
-                            <Badge variant={e.status === "approved" ? "default" : e.status === "pending" ? "outline" : "destructive"} className="text-xs">
-                              {e.status === "approved" ? "Enrolled" : e.status === "pending" ? "Pending" : "Declined"}
+                            <Badge variant={e.status === "approved" ? "default" : e.status === "pending" ? "outline" : "destructive"} className={`text-xs ${e.status === "restricted" ? "bg-orange-500 hover:bg-orange-600 text-white border-none" : ""}`}>
+                              {e.status === "approved" ? "Enrolled" : e.status === "pending" ? "Pending" : e.status === "restricted" ? "Restricted" : "Declined"}
                             </Badge>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">{e.userEmail} | {e.userWhatsapp}</p>
                         </div>
-                        {e.status === "pending" && (
-                          <div className="flex gap-1">
-                            <Button size="sm" onClick={() => enrollmentAction.mutate({ id: e.id, status: "approved" })} disabled={enrollmentAction.isPending} data-testid={`button-approve-${e.id}`}>
-                              Approve
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => enrollmentAction.mutate({ id: e.id, status: "declined" })} disabled={enrollmentAction.isPending} data-testid={`button-decline-${e.id}`}>
-                              Decline
-                            </Button>
-                          </div>
-                        )}
-                        {e.status === "declined" && (
-                          <Button size="sm" onClick={() => enrollmentAction.mutate({ id: e.id, status: "approved" })} disabled={enrollmentAction.isPending} data-testid={`button-approve-${e.id}`}>
-                            Approve
-                          </Button>
-                        )}
+                        <div className="flex gap-1 flex-wrap">
+                          {e.status === "pending" && (
+                            <>
+                              <Button size="sm" onClick={() => enrollmentAction.mutate({ id: e.id, status: "approved" })} disabled={enrollmentAction.isPending || dismissEnrollment.isPending} data-testid={`button-approve-${e.id}`}>
+                                Approve
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => enrollmentAction.mutate({ id: e.id, status: "declined" })} disabled={enrollmentAction.isPending || dismissEnrollment.isPending} data-testid={`button-decline-${e.id}`}>
+                                Decline
+                              </Button>
+                            </>
+                          )}
+                          {e.status === "approved" && (
+                            <>
+                              <Button size="sm" variant="outline" className="text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => enrollmentAction.mutate({ id: e.id, status: "restricted" })} disabled={enrollmentAction.isPending || dismissEnrollment.isPending} data-testid={`button-restrict-${e.id}`}>
+                                Restrict
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50" onClick={() => dismissEnrollment.mutate(e.id)} disabled={enrollmentAction.isPending || dismissEnrollment.isPending} data-testid={`button-dismiss-${e.id}`}>
+                                Dismiss
+                              </Button>
+                            </>
+                          )}
+                          {e.status === "restricted" && (
+                            <>
+                              <Button size="sm" onClick={() => enrollmentAction.mutate({ id: e.id, status: "approved" })} disabled={enrollmentAction.isPending || dismissEnrollment.isPending} data-testid={`button-approve-${e.id}`}>
+                                Re-approve
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50" onClick={() => dismissEnrollment.mutate(e.id)} disabled={enrollmentAction.isPending || dismissEnrollment.isPending} data-testid={`button-dismiss-${e.id}`}>
+                                Dismiss
+                              </Button>
+                            </>
+                          )}
+                          {e.status === "declined" && (
+                            <>
+                              <Button size="sm" onClick={() => enrollmentAction.mutate({ id: e.id, status: "approved" })} disabled={enrollmentAction.isPending || dismissEnrollment.isPending} data-testid={`button-approve-${e.id}`}>
+                                Approve
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50" onClick={() => dismissEnrollment.mutate(e.id)} disabled={enrollmentAction.isPending || dismissEnrollment.isPending} data-testid={`button-dismiss-${e.id}`}>
+                                Dismiss
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

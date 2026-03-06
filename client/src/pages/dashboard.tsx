@@ -340,6 +340,7 @@ function EnrolledCourses({ userId }: { userId: number }) {
 
   const enrolled = enrollments?.filter((e: any) => e.status === "approved") || [];
   const pending = enrollments?.filter((e: any) => e.status === "pending") || [];
+  const restricted = enrollments?.filter((e: any) => e.status === "restricted") || [];
   const declined = enrollments?.filter((e: any) => e.status === "declined") || [];
 
   const enrollMutation = useMutation({
@@ -462,6 +463,56 @@ function EnrolledCourses({ userId }: { userId: number }) {
                     </div>
                     <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-none text-[10px] px-2 shrink-0">
                       Pending
+                    </Badge>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {(isLoading || restricted.length > 0) && (
+        <Card className="border-orange-200/60 dark:border-orange-800/40 overflow-hidden" data-testid="card-restricted-courses">
+          <div className="h-1 bg-gradient-to-r from-orange-400 to-amber-500" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+                <X className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              </div>
+              Restricted
+              {restricted.length > 0 && (
+                <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border-none text-xs">
+                  {restricted.length}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (<Skeleton key={i} className="h-14 w-full rounded-lg" />))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {restricted.map((e: any, idx: number) => (
+                  <motion.div
+                    key={e.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.08 }}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/10 border border-orange-100 dark:border-orange-800/30"
+                    data-testid={`enrollment-restricted-${e.id}`}
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0 shadow-sm">
+                      <X className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate block">{e.courseTitle || `Course #${e.courseId}`}</span>
+                      <span className="text-xs text-orange-600/70 dark:text-orange-400/60">Access has been restricted</span>
+                    </div>
+                    <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border-none text-[10px] px-2 shrink-0">
+                      Restricted
                     </Badge>
                   </motion.div>
                 ))}

@@ -40,7 +40,7 @@ export default function ClassesPage() {
     enabled: !!user,
   });
 
-  const enrolledCourseIds = new Set(enrollments?.map(e => e.courseId) ?? []);
+  const enrolledCourseIds = new Set(enrollments?.filter(e => e.status === "approved").map(e => e.courseId) ?? []);
 
   useEffect(() => {
     if (data?.items) {

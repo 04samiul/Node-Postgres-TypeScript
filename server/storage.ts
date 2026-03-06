@@ -88,6 +88,7 @@ export interface IStorage {
   getUserEnrollments(userId: number): Promise<Enrollment[]>;
   getEnrollment(userId: number, courseId: number): Promise<Enrollment | undefined>;
   updateEnrollment(id: number, data: Partial<Enrollment>): Promise<Enrollment | undefined>;
+  deleteEnrollment(id: number): Promise<boolean>;
   getEnrollmentsByCourseId(courseId: number): Promise<Enrollment[]>;
   getAllEnrollments(): Promise<Enrollment[]>;
 
@@ -397,6 +398,11 @@ export class DatabaseStorage implements IStorage {
   async updateEnrollment(id: number, data: Partial<Enrollment>): Promise<Enrollment | undefined> {
     const [updated] = await db.update(enrollments).set(data).where(eq(enrollments.id, id)).returning();
     return updated;
+  }
+
+  async deleteEnrollment(id: number): Promise<boolean> {
+    const [deleted] = await db.delete(enrollments).where(eq(enrollments.id, id)).returning();
+    return !!deleted;
   }
 
   async getEnrollmentsByCourseId(courseId: number): Promise<Enrollment[]> {

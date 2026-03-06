@@ -28,7 +28,7 @@ export default function ResourcesPage() {
     enabled: !!user,
   });
 
-  const enrolledCourseIds = new Set(enrollments?.map(e => e.courseId) ?? []);
+  const enrolledCourseIds = new Set(enrollments?.filter(e => e.status === "approved").map(e => e.courseId) ?? []);
 
   const filtered = resourceItems?.filter((r) => {
     if (filter === "All") return true;

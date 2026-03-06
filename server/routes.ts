@@ -577,13 +577,11 @@ export async function registerRoutes(
       const courseId = parseInt(req.params.courseId);
       const course = await storage.getCourse(courseId);
       if (!course) return res.status(404).json({ message: "Course not found" });
-      if (course.access === "paid") {
-        const user = await storage.getUser(req.session.userId!);
-        if (!user?.isPremium) {
-          return res.status(403).json({
-            message: "This is a premium course. Upgrade to access it.",
-          });
-        }
+      const user = await storage.getUser(req.session.userId!);
+      if (course.access === "paid" && !user?.isPremium) {
+        return res.status(403).json({
+          message: "This is a premium course. Upgrade to access it.",
+        });
       }
       const existing = await storage.getEnrollment(
         req.session.userId!,
@@ -600,16 +598,19 @@ export async function registerRoutes(
         });
       }
       
+      const autoApprove = user?.isPremium === true;
+      const enrollStatus = autoApprove ? "approved" : "pending";
+      
       let enrollment;
-      if (existing && (existing.status === "declined")) {
+      if (existing && (existing.status === "declined" || existing.status === "restricted")) {
         enrollment = await storage.updateEnrollment(existing.id, {
-          status: "pending",
+          status: enrollStatus,
         });
       } else {
         enrollment = await storage.createEnrollment({
           userId: req.session.userId!,
           courseId,
-          status: "pending",
+          status: enrollStatus,
         });
       }
 
@@ -1058,14 +1059,25 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/admin/enrollments/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteEnrollment(id);
+      if (!deleted) return res.status(404).json({ message: "Enrollment not found" });
+      res.json({ message: "Enrollment dismissed" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.patch("/api/admin/enrollments/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { status } = req.body;
-      if (!["approved", "declined"].includes(status)) {
+      if (!["approved", "declined", "restricted"].includes(status)) {
         return res
           .status(400)
-          .json({ message: "Status must be approved or declined" });
+          .json({ message: "Status must be approved, declined, or restricted" });
       }
       const updated = await storage.updateEnrollment(id, { status });
       if (!updated)
