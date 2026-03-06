@@ -13,7 +13,7 @@ import {
   users, heroBanners, courses, mockTests, mockSubmissions, classes, resources, notices, teamMembers, enrollments, siteSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, and } from "drizzle-orm";
+import { eq, desc, count, and, isNull } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -37,14 +37,17 @@ export interface IStorage {
   getAllMockTests(): Promise<MockTest[]>;
   getMockTest(id: number): Promise<MockTest | undefined>;
   createMockTest(data: InsertMockTest): Promise<MockTest>;
+  getMockTestsByCourseId(courseId: number): Promise<MockTest[]>;
 
   getLatestClasses(limit: number, offset?: number, tag?: string): Promise<{ items: Class[], total: number }>;
   getAllClasses(): Promise<Class[]>;
   createClass(data: InsertClass): Promise<Class>;
+  getClassesByCourseId(courseId: number): Promise<Class[]>;
 
   getLatestResources(limit: number): Promise<Resource[]>;
   getAllResources(): Promise<Resource[]>;
   createResource(data: InsertResource): Promise<Resource>;
+  getResourcesByCourseId(courseId: number): Promise<Resource[]>;
 
   getLatestNotices(limit: number): Promise<Notice[]>;
   getAllNotices(): Promise<Notice[]>;
@@ -165,7 +168,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestMockTests(limit: number): Promise<MockTest[]> {
-    return db.select().from(mockTests).where(eq(mockTests.isVisible, true)).orderBy(desc(mockTests.createdAt)).limit(limit);
+    return db.select().from(mockTests).where(and(eq(mockTests.isVisible, true), isNull(mockTests.courseId))).orderBy(desc(mockTests.createdAt)).limit(limit);
+  }
+
+  async getMockTestsByCourseId(courseId: number): Promise<MockTest[]> {
+    return db.select().from(mockTests).where(and(eq(mockTests.courseId, courseId), eq(mockTests.isVisible, true))).orderBy(desc(mockTests.createdAt));
   }
 
   async getAllMockTests(): Promise<MockTest[]> {
@@ -183,22 +190,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestClasses(limit: number, offset: number = 0, tag?: string): Promise<{ items: Class[], total: number }> {
-    const query = db.select().from(classes).where(
-      and(
-        eq(classes.isVisible, true),
-        tag && tag !== "All" ? eq(classes.tag, tag) : undefined
-      )
-    );
+    const conditions = [
+      eq(classes.isVisible, true),
+      isNull(classes.courseId),
+    ];
+    if (tag && tag !== "All") conditions.push(eq(classes.tag, tag));
 
-    const [totalCount] = await db.select({ count: count() }).from(classes).where(
-      and(
-        eq(classes.isVisible, true),
-        tag && tag !== "All" ? eq(classes.tag, tag) : undefined
-      )
-    );
+    const query = db.select().from(classes).where(and(...conditions));
+
+    const [totalCount] = await db.select({ count: count() }).from(classes).where(and(...conditions));
 
     const items = await query.orderBy(desc(classes.createdAt)).limit(limit).offset(offset);
     return { items, total: Number(totalCount.count) };
+  }
+
+  async getClassesByCourseId(courseId: number): Promise<Class[]> {
+    return db.select().from(classes).where(and(eq(classes.courseId, courseId), eq(classes.isVisible, true))).orderBy(desc(classes.createdAt));
   }
 
   async getAllClasses(): Promise<Class[]> {
@@ -211,7 +218,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestResources(limit: number): Promise<Resource[]> {
-    return db.select().from(resources).where(eq(resources.isVisible, true)).orderBy(desc(resources.createdAt)).limit(limit);
+    return db.select().from(resources).where(and(eq(resources.isVisible, true), isNull(resources.courseId))).orderBy(desc(resources.createdAt)).limit(limit);
+  }
+
+  async getResourcesByCourseId(courseId: number): Promise<Resource[]> {
+    return db.select().from(resources).where(and(eq(resources.courseId, courseId), eq(resources.isVisible, true))).orderBy(desc(resources.createdAt));
   }
 
   async getAllResources(): Promise<Resource[]> {

@@ -26,7 +26,7 @@ import {
   Crown,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import type { Course, MockTest, Class, Resource, Notice, HeroBanner, Enrollment } from "@shared/schema";
+import type { Course, MockTest, Class, Resource, Notice, HeroBanner, Enrollment, PaginatedResponse } from "@shared/schema";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSEO } from "@/hooks/use-seo";
 import { useAuth } from "@/hooks/use-auth";
@@ -346,10 +346,10 @@ function CoursesSection() {
                 </p>
               </CardContent>
               <CardFooter className="gap-2 flex-wrap">
-                <Link href="/courses">
+                <Link href={`/courses/${course.id}`}>
                   <Button variant="outline" size="sm" data-testid={`button-course-more-${course.id}`}>
                     <BookOpen className="h-3.5 w-3.5 mr-1" />
-                    More
+                    Explore
                   </Button>
                 </Link>
                 {!user ? (

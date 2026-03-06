@@ -100,6 +100,7 @@ export const mockTests = pgTable("mock_tests", {
   questions: jsonb("questions").notNull(),
   access: text("access").notNull().default("all"),
   isVisible: boolean("is_visible").notNull().default(true),
+  courseId: integer("course_id"),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -148,6 +149,7 @@ export const classes = pgTable("classes", {
   tag: text("tag").notNull(),
   access: text("access").notNull().default("all"),
   isVisible: boolean("is_visible").notNull().default(true),
+  courseId: integer("course_id"),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -169,6 +171,7 @@ export const resources = pgTable("resources", {
   tag: text("tag").notNull(),
   access: text("access").notNull().default("all"),
   isVisible: boolean("is_visible").notNull().default(true),
+  courseId: integer("course_id"),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -268,8 +271,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   enrollments: many(enrollments),
 }));
 
-export const mockTestsRelations = relations(mockTests, ({ many }) => ({
+export const mockTestsRelations = relations(mockTests, ({ one, many }) => ({
   submissions: many(mockSubmissions),
+  course: one(courses, { fields: [mockTests.courseId], references: [courses.id] }),
 }));
 
 export const mockSubmissionsRelations = relations(mockSubmissions, ({ one }) => ({
@@ -277,8 +281,19 @@ export const mockSubmissionsRelations = relations(mockSubmissions, ({ one }) => 
   mockTest: one(mockTests, { fields: [mockSubmissions.mockTestId], references: [mockTests.id] }),
 }));
 
+export const classesRelations = relations(classes, ({ one }) => ({
+  course: one(courses, { fields: [classes.courseId], references: [courses.id] }),
+}));
+
+export const resourcesRelations = relations(resources, ({ one }) => ({
+  course: one(courses, { fields: [resources.courseId], references: [courses.id] }),
+}));
+
 export const coursesRelations = relations(courses, ({ many }) => ({
   enrollments: many(enrollments),
+  classes: many(classes),
+  resources: many(resources),
+  mockTests: many(mockTests),
 }));
 
 export const enrollmentsRelations = relations(enrollments, ({ one }) => ({

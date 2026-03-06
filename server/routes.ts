@@ -318,6 +318,78 @@ export async function registerRoutes(
     res.json(courses);
   });
 
+  app.get("/api/courses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const course = await storage.getCourse(id);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+      res.json(course);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/courses/:id/classes", async (req, res) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      const classList = await storage.getClassesByCourseId(courseId);
+
+      let isEnrolled = false;
+      if (req.session.userId) {
+        const enrollment = await storage.getEnrollment(req.session.userId, courseId);
+        isEnrolled = enrollment?.status === "approved";
+      }
+
+      res.json({ items: classList, isEnrolled });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/courses/:id/resources", async (req, res) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      const resourceList = await storage.getResourcesByCourseId(courseId);
+
+      let isEnrolled = false;
+      if (req.session.userId) {
+        const enrollment = await storage.getEnrollment(req.session.userId, courseId);
+        isEnrolled = enrollment?.status === "approved";
+      }
+
+      res.json({ items: resourceList, isEnrolled });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/courses/:id/mock-tests", async (req, res) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const course = await storage.getCourse(courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      const mockTestList = await storage.getMockTestsByCourseId(courseId);
+      const sanitized = mockTestList.map(({ questions, ...rest }) => rest);
+
+      let isEnrolled = false;
+      if (req.session.userId) {
+        const enrollment = await storage.getEnrollment(req.session.userId, courseId);
+        isEnrolled = enrollment?.status === "approved";
+      }
+
+      res.json({ items: sanitized, isEnrolled });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/mock-tests", async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 100;
     const mockTests = await storage.getLatestMockTests(limit);
@@ -1187,10 +1259,12 @@ export async function registerRoutes(
         access,
         isVisible,
         imageAssignments,
+        courseId,
       } = req.body;
       const data: Record<string, any> = {};
       if (title !== undefined) data.title = title;
       if (tag !== undefined) data.tag = tag;
+      if (courseId !== undefined) data.courseId = courseId === "" || courseId === null ? null : Number(courseId);
       if (publishTime) {
         const parsed = parseBDTime(publishTime);
         if (!parsed)
@@ -1277,6 +1351,7 @@ export async function registerRoutes(
         thumbnail,
         access,
         isVisible,
+        courseId,
       } = req.body;
       const data: Record<string, any> = {};
       if (title !== undefined) data.title = title;
@@ -1286,6 +1361,7 @@ export async function registerRoutes(
       if (thumbnail !== undefined) data.thumbnail = thumbnail || null;
       if (access !== undefined) data.access = access;
       if (isVisible !== undefined) data.isVisible = isVisible;
+      if (courseId !== undefined) data.courseId = courseId === "" || courseId === null ? null : Number(courseId);
       const updated = await storage.updateClass(id, data);
       if (!updated) return res.status(404).json({ message: "Class not found" });
       res.json(updated);

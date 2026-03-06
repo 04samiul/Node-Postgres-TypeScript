@@ -21,6 +21,7 @@ const ContactPage = lazy(() => import("@/pages/contact"));
 const AuthPage = lazy(() => import("@/pages/auth-page"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const AdminDashboard = lazy(() => import("@/pages/admin"));
+const CourseDetailPage = lazy(() => import("@/pages/course-detail"));
 const MockExamPage = lazy(() => import("@/pages/mock-exam"));
 const MockReviewPage = lazy(() => import("@/pages/mock-review"));
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -47,6 +48,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/courses" component={CoursesPage} />
+        <Route path="/courses/:id" component={CourseDetailPage} />
         <Route path="/mock-tests" component={MockTestsPage} />
         <Route path="/mock-tests/:id" component={MockExamPage} />
         <ProtectedRoute path="/mock-review/:submissionId" component={MockReviewPage} />

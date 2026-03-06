@@ -822,12 +822,14 @@ function MockTestForm({
   isPending,
   onCancel,
   title,
+  courses,
 }: {
   initialData?: MockTest;
   onSubmit: (data: any) => void;
   isPending: boolean;
   onCancel: () => void;
   title: string;
+  courses?: Course[];
 }) {
   const { toast } = useToast();
   const [formData, setFormData] = useState<Record<string, any>>(() => {
@@ -842,6 +844,7 @@ function MockTestForm({
         publishTime: pt,
         access: initialData.access,
         isVisible: initialData.isVisible,
+        courseId: initialData.courseId ?? "__none__",
       };
     }
     return {};
@@ -920,6 +923,7 @@ function MockTestForm({
       }
     }
     const publishTimeWithTZ = formData.publishTime ? formData.publishTime + "+06:00" : undefined;
+    const courseIdVal = formData.courseId && formData.courseId !== "__none__" ? Number(formData.courseId) : null;
     const data = {
       ...formData,
       publishTime: publishTimeWithTZ,
@@ -928,6 +932,7 @@ function MockTestForm({
       duration: Number(formData.duration) || 60,
       isVisible: formData.isVisible ?? true,
       access: formData.access || "all",
+      courseId: courseIdVal,
     };
     onSubmit(data);
   };
@@ -988,6 +993,16 @@ function MockTestForm({
               <Label className="text-xs">Visible</Label>
               <Switch checked={formData.isVisible ?? true} onCheckedChange={(v) => setFormData({ ...formData, isVisible: v })} />
             </div>
+          </div>
+          <div>
+            <Label className="text-xs">Course (optional)</Label>
+            <Select value={String(formData.courseId || "__none__")} onValueChange={(v) => setFormData({ ...formData, courseId: v })}>
+              <SelectTrigger data-testid="select-mock-course"><SelectValue placeholder="Standalone (no course)" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Standalone (no course)</SelectItem>
+                {courses?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
@@ -1076,6 +1091,7 @@ function MockTestForm({
 
 function MockTestsTab() {
   const { data: testList, isLoading } = useQuery<MockTest[]>({ queryKey: ["/api/admin/mock-tests"] });
+  const { data: courseList } = useQuery<Course[]>({ queryKey: ["/api/admin/courses"] });
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [editingTest, setEditingTest] = useState<MockTest | null>(null);
@@ -1121,6 +1137,7 @@ function MockTestsTab() {
           onSubmit={(data) => createMutation.mutate(data)}
           isPending={createMutation.isPending}
           onCancel={() => setIsCreating(false)}
+          courses={courseList}
         />
       ) : editingTest ? (
         <MockTestForm
@@ -1129,6 +1146,7 @@ function MockTestsTab() {
           onSubmit={(data) => updateMutation.mutate({ id: editingTest.id, data })}
           isPending={updateMutation.isPending}
           onCancel={() => setEditingTest(null)}
+          courses={courseList}
         />
       ) : null}
 
@@ -1140,6 +1158,7 @@ function MockTestsTab() {
               test={t}
               onEdit={() => { setEditingTest(t); setIsCreating(false); }}
               onDelete={() => deleteMutation.mutate(t.id)}
+              courseName={t.courseId ? courseList?.find((c) => c.id === t.courseId)?.title : undefined}
             />
           ))}
           {(!testList || testList.length === 0) && <p className="text-sm text-muted-foreground mt-4">No mock tests yet.</p>}
@@ -1149,7 +1168,7 @@ function MockTestsTab() {
   );
 }
 
-function MockTestCard({ test, onEdit, onDelete }: { test: MockTest; onEdit: () => void; onDelete: () => void }) {
+function MockTestCard({ test, onEdit, onDelete, courseName }: { test: MockTest; onEdit: () => void; onDelete: () => void; courseName?: string }) {
   const questions = Array.isArray(test.questions) ? test.questions : [];
   const [showSubmissions, setShowSubmissions] = useState(false);
 
@@ -1164,6 +1183,7 @@ function MockTestCard({ test, onEdit, onDelete }: { test: MockTest; onEdit: () =
               <span className="text-xs text-muted-foreground">{test.duration} min</span>
               <span className="text-xs text-muted-foreground">{questions.length} questions</span>
               <span className="text-xs text-muted-foreground">{test.access}</span>
+              {courseName && <Badge variant="outline" className="text-xs" data-testid={`badge-mock-course-${test.id}`}>{courseName}</Badge>}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Publish: {test.publishTime ? new Date(test.publishTime).toLocaleString("en-US", { timeZone: "Asia/Dhaka", dateStyle: "medium", timeStyle: "short" }) + " (BST)" : "N/A"}
@@ -1348,6 +1368,7 @@ function MockSubmissionsList({ mockTestId, mockTitle }: { mockTestId: number; mo
 
 function ClassesTab() {
   const { data: classList, isLoading } = useQuery<Class[]>({ queryKey: ["/api/admin/classes"] });
+  const { data: courseList } = useQuery<Course[]>({ queryKey: ["/api/admin/courses"] });
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -1394,6 +1415,7 @@ function ClassesTab() {
       thumbnail: cls.thumbnail || "",
       access: cls.access,
       isVisible: cls.isVisible,
+      courseId: cls.courseId ?? "__none__",
     });
   };
 
@@ -1406,7 +1428,7 @@ function ClassesTab() {
       ) : (
         <Card className="mb-4">
           <CardContent className="pt-4">
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate({ ...formData, isVisible: formData.isVisible ?? true, access: formData.access || "all" }); }} className="space-y-3">
+            <form onSubmit={(e) => { e.preventDefault(); const courseIdVal = formData.courseId && formData.courseId !== "__none__" ? Number(formData.courseId) : null; createMutation.mutate({ ...formData, isVisible: formData.isVisible ?? true, access: formData.access || "all", courseId: courseIdVal }); }} className="space-y-3">
               <div>
                 <Label className="text-xs">Title</Label>
                 <Input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required data-testid="input-class-title" />
@@ -1432,6 +1454,16 @@ function ClassesTab() {
               <div>
                 <Label className="text-xs">Description</Label>
                 <Textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs">Course (optional)</Label>
+                <Select value={String(formData.courseId || "__none__")} onValueChange={(v) => setFormData({ ...formData, courseId: v })}>
+                  <SelectTrigger data-testid="select-class-course"><SelectValue placeholder="Standalone (no course)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Standalone (no course)</SelectItem>
+                    {courseList?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1466,7 +1498,7 @@ function ClassesTab() {
             <Card key={cls.id} data-testid={`card-class-${cls.id}`}>
               <CardContent className="pt-4">
                 {editingId === cls.id ? (
-                  <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: cls.id, data: editData }); }} className="space-y-3">
+                  <form onSubmit={(e) => { e.preventDefault(); const courseIdVal = editData.courseId && editData.courseId !== "__none__" ? Number(editData.courseId) : null; updateMutation.mutate({ id: cls.id, data: { ...editData, courseId: courseIdVal } }); }} className="space-y-3">
                     <div>
                       <Label className="text-xs">Title</Label>
                       <Input value={editData.title || ""} onChange={(e) => setEditData({ ...editData, title: e.target.value })} required />
@@ -1492,6 +1524,16 @@ function ClassesTab() {
                     <div>
                       <Label className="text-xs">Description</Label>
                       <Textarea value={editData.description || ""} onChange={(e) => setEditData({ ...editData, description: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Course (optional)</Label>
+                      <Select value={String(editData.courseId || "__none__")} onValueChange={(v) => setEditData({ ...editData, courseId: v })}>
+                        <SelectTrigger data-testid="select-edit-class-course"><SelectValue placeholder="Standalone (no course)" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Standalone (no course)</SelectItem>
+                          {courseList?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -1527,6 +1569,9 @@ function ClassesTab() {
                         <div className="flex items-center gap-2 flex-wrap mt-1">
                           <Badge variant="secondary" className="text-xs">{cls.tag}</Badge>
                           <span className="text-xs text-muted-foreground">{cls.access}</span>
+                          {cls.courseId && courseList?.find((c) => c.id === cls.courseId) && (
+                            <Badge variant="outline" className="text-xs" data-testid={`badge-class-course-${cls.id}`}>{courseList.find((c) => c.id === cls.courseId)!.title}</Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1560,6 +1605,7 @@ function ClassesTab() {
 
 function ResourcesTab() {
   const { data: resourceList, isLoading } = useQuery<Resource[]>({ queryKey: ["/api/admin/resources"] });
+  const { data: courseList } = useQuery<Course[]>({ queryKey: ["/api/admin/courses"] });
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -1589,7 +1635,7 @@ function ResourcesTab() {
       ) : (
         <Card className="mb-4">
           <CardContent className="pt-4">
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate({ ...formData, isVisible: formData.isVisible ?? true, access: formData.access || "all" }); }} className="space-y-3">
+            <form onSubmit={(e) => { e.preventDefault(); const courseIdVal = formData.courseId && formData.courseId !== "__none__" ? Number(formData.courseId) : null; createMutation.mutate({ ...formData, isVisible: formData.isVisible ?? true, access: formData.access || "all", courseId: courseIdVal }); }} className="space-y-3">
               <div>
                 <Label className="text-xs">Title</Label>
                 <Input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
@@ -1610,6 +1656,16 @@ function ResourcesTab() {
               <div>
                 <Label className="text-xs">Description</Label>
                 <Textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs">Course (optional)</Label>
+                <Select value={String(formData.courseId || "__none__")} onValueChange={(v) => setFormData({ ...formData, courseId: v })}>
+                  <SelectTrigger data-testid="select-resource-course"><SelectValue placeholder="Standalone (no course)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Standalone (no course)</SelectItem>
+                    {courseList?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1648,6 +1704,9 @@ function ResourcesTab() {
                   <div className="flex items-center gap-2 flex-wrap mt-1">
                     <Badge variant="secondary" className="text-xs">{r.tag}</Badge>
                     <span className="text-xs text-muted-foreground">{r.access}</span>
+                    {r.courseId && courseList?.find((c) => c.id === r.courseId) && (
+                      <Badge variant="outline" className="text-xs" data-testid={`badge-resource-course-${r.id}`}>{courseList.find((c) => c.id === r.courseId)!.title}</Badge>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

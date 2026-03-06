@@ -22,6 +22,7 @@ Crack-CU is a mobile-responsive ed-tech platform for Chittagong University admis
 - Feb 2026: Persistent timer rules - admin sets 1st/2nd timer by year, auto-applies to existing and future users via siteSettings
 - Feb 2026: Pagination and "Load More" implemented for Classes page (6 items per page)
 - Feb 2026: SEO optimization - dynamic page titles/meta via useSEO hook, OG/Twitter cards, JSON-LD structured data, robots.txt, sitemap.xml, image lazy loading
+- Mar 2026: Course Content System - each course is a container for its own classes, resources, and mock tests. courseId column added to classes, resources, mockTests. Course detail page at /courses/:id with tabbed content sections. Admin can assign content to courses. Standalone content (no courseId) still appears on general pages. Enrolled students access course content, non-enrolled see locked state.
 - Feb 2026: Full migration to Supabase - database (SUPABASE_DATABASE_URL) and file storage (Supabase Storage bucket)
 - Database schema: 11 tables via Drizzle ORM + PostgreSQL (Supabase)
 - File storage: Supabase Storage (configurable bucket via SUPABASE_BUCKET env var)
@@ -47,15 +48,26 @@ Crack-CU is a mobile-responsive ed-tech platform for Chittagong University admis
 - `client/src/components/footer.tsx` - Footer with social links
 - `client/src/components/image-uploader.tsx` - Reusable image uploader (URL + file upload)
 - `client/src/pages/mock-exam.tsx` - Mock test exam page with timer and grading
+- `client/src/pages/course-detail.tsx` - Course detail page with tabbed content sections
 
 ## Pages
 - Home (hero carousel, 5 content sections)
-- Courses, Mock Tests, Classes, Resources, Notices (list pages with filters)
+- Courses (/courses) - list page with enrollment buttons
+- Course Detail (/courses/:id) - course info + tabbed content (classes, resources, mocks) with enrollment gating
+- Mock Tests, Classes, Resources, Notices (list pages with filters, only shows standalone content)
 - Mock Exam (/mock-tests/:id) - Full exam interface with timer, navigation, submission
 - Contact (form + team profiles)
 - Auth (login/register with HSC/SSC info)
 - Dashboard (student profile, submissions, enrollments)
 - Admin (tabbed panel: users, courses, mock tests, classes, resources, notices, banners, team)
+
+## Course Content System
+- Classes, Resources, and MockTests have an optional `courseId` column
+- Content with `courseId` set belongs to that specific course and only appears inside the course detail page
+- Content without `courseId` (null) is standalone and appears on the general Classes/Resources/Mock Tests pages
+- Admin can assign content to a course via a dropdown when creating/editing
+- Course detail page (/courses/:id) shows tabbed sections for classes, resources, and mock tests
+- Enrolled students can access course content; non-enrolled see locked state with "Enroll to Access"
 
 ## User Preferences
 - Mobile-first design priority
