@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { BookOpen, FileText, Play, Calendar, User, Award, Clock, Eye, Crown, Pencil, X, Save, Loader2 } from "lucide-react";
+import { BookOpen, FileText, Play, Calendar, User, Award, Clock, Eye, EyeOff, Crown, Pencil, X, Save, Loader2, KeyRound } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -71,6 +71,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <ProfileCard user={user} />
+          <ChangePasswordCard />
           <RecentSubmissions userId={user.id} />
         </div>
         <div className="space-y-6">
@@ -241,6 +242,90 @@ function ProfileCard({ user }: { user: any }) {
           <Button onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isPending} data-testid="button-save-profile">
             <Save className="h-3.5 w-3.5 mr-1" />
             {updateMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ChangePasswordCard() {
+  const { toast } = useToast();
+  const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [show, setShow] = useState({ current: false, newP: false, confirm: false });
+
+  const changeMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      const res = await apiRequest("POST", "/api/change-password", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Password changed successfully" });
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
+    },
+  });
+
+  function handleSubmit() {
+    if (!form.currentPassword || !form.newPassword || !form.confirmPassword) {
+      return toast({ title: "All fields are required", variant: "destructive" });
+    }
+    if (form.newPassword.length < 6) {
+      return toast({ title: "New password must be at least 6 characters", variant: "destructive" });
+    }
+    if (form.newPassword !== form.confirmPassword) {
+      return toast({ title: "New passwords do not match", variant: "destructive" });
+    }
+    changeMutation.mutate({ currentPassword: form.currentPassword, newPassword: form.newPassword });
+  }
+
+  function PasswordInput({ id, label, field, showKey }: { id: string; label: string; field: keyof typeof form; showKey: keyof typeof show }) {
+    return (
+      <div>
+        <Label className="text-xs">{label}</Label>
+        <div className="relative">
+          <Input
+            id={id}
+            type={show[showKey] ? "text" : "password"}
+            value={form[field]}
+            onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+            placeholder="••••••••"
+            data-testid={`input-${id}`}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-0 top-0 h-full px-3"
+            onClick={() => setShow({ ...show, [showKey]: !show[showKey] })}
+            data-testid={`button-toggle-${id}`}
+          >
+            {show[showKey] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Card data-testid="card-change-password">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <KeyRound className="h-4 w-4" /> Change Password
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <PasswordInput id="current-password" label="Current Password" field="currentPassword" showKey="current" />
+          <PasswordInput id="new-password" label="New Password" field="newPassword" showKey="newP" />
+          <PasswordInput id="confirm-password" label="Confirm New Password" field="confirmPassword" showKey="confirm" />
+        </div>
+        <div className="mt-4">
+          <Button onClick={handleSubmit} disabled={changeMutation.isPending} data-testid="button-change-password">
+            {changeMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <KeyRound className="h-3.5 w-3.5 mr-1" />}
+            {changeMutation.isPending ? "Updating..." : "Update Password"}
           </Button>
         </div>
       </CardContent>

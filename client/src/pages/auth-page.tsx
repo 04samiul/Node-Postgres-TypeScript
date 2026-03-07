@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
-import { Loader2, Eye, EyeOff, Copy, CheckCircle2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, Copy, CheckCircle2, Phone } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { SiWhatsapp } from "react-icons/si";
 import { BANGLADESH_BOARDS, HSC_GROUPS } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useSEO } from "@/hooks/use-seo";
@@ -54,12 +56,22 @@ export default function AuthPage() {
   );
 }
 
+const SUPPORT_WHATSAPP = "01522132809";
+
 function LoginForm() {
   const { loginMutation } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loginType, setLoginType] = useState<"username" | "whatsapp">("username");
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotDialog, setShowForgotDialog] = useState(false);
+  const [copiedNumber, setCopiedNumber] = useState(false);
+
+  function copyNumber() {
+    navigator.clipboard.writeText(SUPPORT_WHATSAPP);
+    setCopiedNumber(true);
+    setTimeout(() => setCopiedNumber(false), 2000);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -111,12 +123,65 @@ function LoginForm() {
               </Button>
             </div>
           </div>
+          <div className="flex justify-end -mt-1">
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-primary transition-colors underline-offset-2 hover:underline"
+              onClick={() => setShowForgotDialog(true)}
+              data-testid="button-forgot-password"
+            >
+              Forgot Password?
+            </button>
+          </div>
           <Button type="submit" className="w-full" disabled={loginMutation.isPending} data-testid="button-login-submit">
             {loginMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Sign In
           </Button>
         </form>
       </CardContent>
+
+      <Dialog open={showForgotDialog} onOpenChange={setShowForgotDialog}>
+        <DialogContent className="max-w-sm" data-testid="dialog-forgot-password">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <SiWhatsapp className="h-5 w-5 text-green-500" /> Forgot Password?
+            </DialogTitle>
+            <DialogDescription>
+              We don't have an automated password reset. Please contact us on WhatsApp and we'll help you regain access.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+              <Phone className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+              <span className="text-lg font-semibold tracking-wide text-green-700 dark:text-green-300" data-testid="text-support-number">
+                {SUPPORT_WHATSAPP}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 gap-2"
+                onClick={copyNumber}
+                data-testid="button-copy-whatsapp"
+              >
+                {copiedNumber ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                {copiedNumber ? "Copied!" : "Copy Number"}
+              </Button>
+              <a
+                href={`https://wa.me/88${SUPPORT_WHATSAPP}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1"
+                data-testid="link-open-whatsapp"
+              >
+                <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white">
+                  <SiWhatsapp className="h-4 w-4" /> Open WhatsApp
+                </Button>
+              </a>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
