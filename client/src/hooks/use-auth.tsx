@@ -63,8 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: Error) => {
       toast({
-        title: "Login failed",
-        description: error.message,
+        title: error.message || "Login failed. Please try again.",
         variant: "destructive",
       });
     },
