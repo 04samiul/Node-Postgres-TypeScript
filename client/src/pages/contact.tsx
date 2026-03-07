@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
+import { RichTextDisplay } from "@/components/rich-text-editor";
 import { Mail, Phone, MapPin, Send, Users } from "lucide-react";
 import { SiWhatsapp, SiFacebook, SiYoutube, SiTelegram } from "react-icons/si";
 import type { TeamMember } from "@shared/schema";
@@ -57,7 +58,7 @@ export default function ContactPage() {
                     </Avatar>
                     <h3 className="font-semibold text-sm" data-testid={`text-member-name-${member.id}`}>{member.name}</h3>
                     <p className="text-xs text-muted-foreground mb-1">{member.post}</p>
-                    {member.description && <p className="text-xs text-muted-foreground line-clamp-2">{member.description}</p>}
+                    {member.description && <div className="text-xs text-muted-foreground line-clamp-2"><RichTextDisplay content={member.description} /></div>}
                   </CardContent>
                 </Card>
               </motion.div>

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import { RichTextDisplay } from "@/components/rich-text-editor";
 import { BookOpen, Calendar, Image as ImageIcon, Loader2, CheckCircle2, Crown } from "lucide-react";
 import type { Course, Enrollment } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -139,9 +140,9 @@ export default function CoursesPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1">
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2" data-testid={`text-course-desc-${course.id}`}>
-                    {course.description}
-                  </p>
+                  <div className="text-sm text-muted-foreground line-clamp-2 mb-2" data-testid={`text-course-desc-${course.id}`}>
+                    <RichTextDisplay content={course.description || ""} />
+                  </div>
                   {course.lastDate && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3" />

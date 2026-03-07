@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { Calendar, Bell, ExternalLink } from "lucide-react";
+import { RichTextDisplay } from "@/components/rich-text-editor";
 import type { Notice } from "@shared/schema";
 import { useSEO } from "@/hooks/use-seo";
 
@@ -70,9 +71,9 @@ export default function NoticesPage() {
                     <Calendar className="h-3 w-3" />
                     <span>{notice.date ? format(new Date(notice.date), "MMM dd, yyyy") : format(new Date(notice.createdAt), "MMM dd, yyyy")}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{notice.description}</p>
+                  <div className="text-sm text-muted-foreground line-clamp-2"><RichTextDisplay content={notice.description || ""} /></div>
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
-                    {notice.description.length > 150 && (
+                    {(notice.description || "").replace(/<[^>]*>/g, "").length > 150 && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -119,7 +120,7 @@ export default function NoticesPage() {
                 {selectedNotice?.date ? format(new Date(selectedNotice.date), "MMM dd, yyyy") : selectedNotice?.createdAt ? format(new Date(selectedNotice.createdAt), "MMM dd, yyyy") : ""}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">{selectedNotice?.description}</p>
+            <div className="text-sm text-muted-foreground leading-relaxed"><RichTextDisplay content={selectedNotice?.description || ""} /></div>
             {selectedNotice?.url && (
               <a href={selectedNotice.url} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block">
                 <Button variant="outline" size="sm" data-testid="button-dialog-url">
