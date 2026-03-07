@@ -561,14 +561,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/my-enrollments", requireAuth, async (req, res) => {
-    const enrollmentList = await storage.getUserEnrollments(
-      req.session.userId!,
-    );
-    const allCourses = await storage.getAllCourses();
-    const enriched = enrollmentList.map((e) => {
-      const course = allCourses.find((c) => c.id === e.courseId);
-      return { ...e, courseTitle: course?.title || "" };
-    });
+    const enriched = await storage.getUserEnrollmentsWithCourses(req.session.userId!);
     res.json(enriched);
   });
 

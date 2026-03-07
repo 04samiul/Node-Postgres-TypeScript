@@ -86,6 +86,7 @@ export interface IStorage {
 
   createEnrollment(data: InsertEnrollment): Promise<Enrollment>;
   getUserEnrollments(userId: number): Promise<Enrollment[]>;
+  getUserEnrollmentsWithCourses(userId: number): Promise<(Enrollment & { courseTitle: string; courseBanner: string | null })[]>;
   getEnrollment(userId: number, courseId: number): Promise<Enrollment | undefined>;
   updateEnrollment(id: number, data: Partial<Enrollment>): Promise<Enrollment | undefined>;
   deleteEnrollment(id: number): Promise<boolean>;
@@ -388,6 +389,24 @@ export class DatabaseStorage implements IStorage {
 
   async getUserEnrollments(userId: number): Promise<Enrollment[]> {
     return db.select().from(enrollments).where(eq(enrollments.userId, userId)).orderBy(desc(enrollments.createdAt));
+  }
+
+  async getUserEnrollmentsWithCourses(userId: number): Promise<(Enrollment & { courseTitle: string; courseBanner: string | null })[]> {
+    const rows = await db
+      .select({
+        id: enrollments.id,
+        userId: enrollments.userId,
+        courseId: enrollments.courseId,
+        status: enrollments.status,
+        createdAt: enrollments.createdAt,
+        courseTitle: courses.title,
+        courseBanner: courses.bannerImage,
+      })
+      .from(enrollments)
+      .leftJoin(courses, eq(courses.id, enrollments.courseId))
+      .where(eq(enrollments.userId, userId))
+      .orderBy(desc(enrollments.createdAt));
+    return rows.map((r) => ({ ...r, courseTitle: r.courseTitle ?? "", courseBanner: r.courseBanner ?? null }));
   }
 
   async getEnrollment(userId: number, courseId: number): Promise<Enrollment | undefined> {
