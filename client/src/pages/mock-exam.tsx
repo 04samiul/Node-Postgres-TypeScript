@@ -77,7 +77,7 @@ export default function MockExamPage() {
   }, [draft, draftLoading, test]);
 
   const saveProgressMutation = useMutation({
-    mutationFn: async (data: { answers: Record<string, number>; remainingTime: number }) => {
+    mutationFn: async (data: { answers: Record<string, number> }) => {
       const res = await apiRequest("POST", `/api/mock-tests/${id}/save-progress`, data);
       const json = await res.json();
       draftIdRef.current = json.id;
@@ -85,12 +85,15 @@ export default function MockExamPage() {
     },
   });
 
+  const timerKey = `mock_timer_${id}`;
+
   const saveProgress = useCallback((currentAnswers: Record<string, number>, currentTime: number) => {
-    const key = JSON.stringify(currentAnswers) + currentTime;
+    const key = JSON.stringify(currentAnswers);
     if (key === lastSavedRef.current) return;
     lastSavedRef.current = key;
-    saveProgressMutation.mutate({ answers: currentAnswers, remainingTime: currentTime });
-  }, []);
+    localStorage.setItem(timerKey, String(currentTime));
+    saveProgressMutation.mutate({ answers: currentAnswers });
+  }, [timerKey]);
 
   useEffect(() => {
     if (mode !== "exam" || timeLeft === null) return;
@@ -113,7 +116,8 @@ export default function MockExamPage() {
     if (mode !== "exam") return;
     const handleUnload = () => {
       if (timeLeft !== null && timeLeft > 0) {
-        const blob = new Blob([JSON.stringify({ answers, remainingTime: timeLeft })], { type: "application/json" });
+        localStorage.setItem(timerKey, String(timeLeft));
+        const blob = new Blob([JSON.stringify({ answers })], { type: "application/json" });
         navigator.sendBeacon(`/api/mock-tests/${id}/save-progress`, blob);
       }
     };
@@ -127,6 +131,7 @@ export default function MockExamPage() {
       return res.json();
     },
     onSuccess: (data: MockSubmission) => {
+      localStorage.removeItem(timerKey);
       setResult(data);
       setMode("submitted");
       draftIdRef.current = null;
@@ -160,7 +165,8 @@ export default function MockExamPage() {
     if (!draft || !test) return;
     const savedAnswers = (draft.answers as Record<string, number>) || {};
     setAnswers(savedAnswers);
-    const savedTime = draft.remainingTime ?? test.duration * 60;
+    const stored = localStorage.getItem(timerKey);
+    const savedTime = stored ? parseInt(stored, 10) : test.duration * 60;
     setTimeLeft(savedTime > 0 ? savedTime : test.duration * 60);
     setMode("exam");
   };
@@ -172,6 +178,7 @@ export default function MockExamPage() {
     } else if (draft) {
       await deleteDraftMutation.mutateAsync(draft.id);
     }
+    localStorage.removeItem(timerKey);
     setAnswers({});
     setTimeLeft(test!.duration * 60);
     setMode("exam");
@@ -179,6 +186,7 @@ export default function MockExamPage() {
   };
 
   const handleReExam = async () => {
+    localStorage.removeItem(timerKey);
     setResult(null);
     setAnswers({});
     setTimeLeft(test!.duration * 60);
@@ -224,7 +232,8 @@ export default function MockExamPage() {
 
   if (mode === "prompt" && draft) {
     const savedAnswerCount = Object.keys((draft.answers as object) || {}).length;
-    const savedTime = draft.remainingTime;
+    const storedTimer = localStorage.getItem(`mock_timer_${id}`);
+    const savedTime = storedTimer ? parseInt(storedTimer, 10) : null;
     return (
       <div className="max-w-md mx-auto px-4 py-16" data-testid="page-exam-prompt">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>

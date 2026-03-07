@@ -398,7 +398,6 @@ export class DatabaseStorage implements IStorage {
       id: mockSubmissions.id,
       mockTestId: mockSubmissions.mockTestId,
       answers: mockSubmissions.answers,
-      remainingTime: mockSubmissions.remainingTime,
       startedAt: mockSubmissions.startedAt,
       mockTestTitle: mockTests.title,
       mockTestDuration: mockTests.duration,

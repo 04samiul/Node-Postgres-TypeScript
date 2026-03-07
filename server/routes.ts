@@ -828,7 +828,6 @@ export async function registerRoutes(
         netMarks,
         passed,
         isSubmitted: true,
-        remainingTime: 0,
         submittedAt: new Date(),
       };
       const existingDraft = await storage.getInProgressSubmission(userId, mockTestId);
@@ -896,13 +895,13 @@ export async function registerRoutes(
     try {
       const mockTestId = parseInt(req.params.id);
       const userId = req.session.userId!;
-      const { answers, remainingTime } = req.body;
+      const { answers } = req.body;
       const existing = await storage.getInProgressSubmission(userId, mockTestId);
       if (existing) {
-        const updated = await storage.updateSubmission(existing.id, { answers: answers || {}, remainingTime: remainingTime ?? existing.remainingTime });
+        const updated = await storage.updateSubmission(existing.id, { answers: answers || {} });
         return res.json(updated);
       }
-      const created = await storage.createSubmission({ mockTestId, userId, answers: answers || {}, remainingTime, isSubmitted: false });
+      const created = await storage.createSubmission({ mockTestId, userId, answers: answers || {}, isSubmitted: false });
       res.json(created);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

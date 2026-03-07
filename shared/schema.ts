@@ -127,7 +127,6 @@ export const mockSubmissions = pgTable("mock_submissions", {
   netMarks: real("net_marks"),
   passed: boolean("passed"),
   isSubmitted: boolean("is_submitted").notNull().default(false),
-  remainingTime: integer("remaining_time"),
   startedAt: timestamp("started_at").notNull().defaultNow(),
   submittedAt: timestamp("submitted_at"),
 });
