@@ -223,8 +223,11 @@ export default function CourseDetailPage() {
       </motion.div>
 
       {totalContent > 0 ? (
-        <Tabs defaultValue="classes" className="w-full">
-          <TabsList className="w-full justify-start mb-4" data-testid="tabs-course-content">
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="w-full justify-start mb-4 overflow-x-auto" data-testid="tabs-course-content">
+            <TabsTrigger value="all" data-testid="tab-all">
+              All ({totalContent})
+            </TabsTrigger>
             <TabsTrigger value="classes" data-testid="tab-classes">
               Classes ({classItems.length})
             </TabsTrigger>
@@ -235,6 +238,26 @@ export default function CourseDetailPage() {
               Mock Tests ({mockItems.length})
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="all">
+            {classesLoading || resourcesLoading || mocksLoading ? (
+              <ContentSkeleton />
+            ) : totalContent > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {classItems.map((cls) => (
+                  <ClassCard key={`cls-${cls.id}`} cls={cls} isEnrolled={isEnrolled} showTypeBadge />
+                ))}
+                {resourceItems.map((res) => (
+                  <ResourceCard key={`res-${res.id}`} resource={res} isEnrolled={isEnrolled} showTypeBadge />
+                ))}
+                {mockItems.map((test) => (
+                  <MockTestCard key={`mock-${test.id}`} test={test} isEnrolled={isEnrolled} showTypeBadge />
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon={<BookOpen className="h-10 w-10" />} text="No content added to this course yet." />
+            )}
+          </TabsContent>
 
           <TabsContent value="classes">
             {classesLoading ? (
@@ -303,7 +326,7 @@ export default function CourseDetailPage() {
   );
 }
 
-function ClassCard({ cls, isEnrolled }: { cls: Class; isEnrolled: boolean }) {
+function ClassCard({ cls, isEnrolled, showTypeBadge }: { cls: Class; isEnrolled: boolean; showTypeBadge?: boolean }) {
   const { user } = useAuth();
   return (
     <Card className="overflow-visible flex flex-col h-full" data-testid={`card-course-class-${cls.id}`}>
@@ -312,6 +335,13 @@ function ClassCard({ cls, isEnrolled }: { cls: Class; isEnrolled: boolean }) {
           <img src={cls.thumbnail} alt={cls.title} className="w-full h-full object-cover rounded-t-xl" loading="lazy" />
         ) : (
           <Video className="h-10 w-10 text-muted-foreground/40" />
+        )}
+        {showTypeBadge && (
+          <div className="absolute top-2 left-2">
+            <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-none text-[10px] px-2">
+              <Video className="h-2.5 w-2.5 mr-1" />Class
+            </Badge>
+          </div>
         )}
         {!isEnrolled && (
           <div className="absolute inset-0 bg-black/40 rounded-t-xl flex items-center justify-center">
@@ -347,13 +377,20 @@ function ClassCard({ cls, isEnrolled }: { cls: Class; isEnrolled: boolean }) {
   );
 }
 
-function ResourceCard({ resource, isEnrolled }: { resource: Resource; isEnrolled: boolean }) {
+function ResourceCard({ resource, isEnrolled, showTypeBadge }: { resource: Resource; isEnrolled: boolean; showTypeBadge?: boolean }) {
   const { user } = useAuth();
   return (
     <Card className="flex flex-col h-full" data-testid={`card-course-resource-${resource.id}`}>
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm line-clamp-2">{resource.title}</CardTitle>
+          <div className="flex items-start gap-2 min-w-0">
+            {showTypeBadge && (
+              <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white border-none text-[10px] px-2 shrink-0 mt-0.5">
+                <FileText className="h-2.5 w-2.5 mr-1" />Resource
+              </Badge>
+            )}
+            <CardTitle className="text-sm line-clamp-2">{resource.title}</CardTitle>
+          </div>
           <Badge variant="secondary" className="text-[10px] shrink-0">{resource.tag}</Badge>
         </div>
       </CardHeader>
@@ -379,7 +416,7 @@ function ResourceCard({ resource, isEnrolled }: { resource: Resource; isEnrolled
   );
 }
 
-function MockTestCard({ test, isEnrolled }: { test: MockTest; isEnrolled: boolean }) {
+function MockTestCard({ test, isEnrolled, showTypeBadge }: { test: MockTest; isEnrolled: boolean; showTypeBadge?: boolean }) {
   const { user } = useAuth();
   const publishDate = new Date(test.publishTime);
   const isUpcoming = publishDate.getTime() > Date.now();
@@ -388,7 +425,14 @@ function MockTestCard({ test, isEnrolled }: { test: MockTest; isEnrolled: boolea
     <Card className="flex flex-col h-full" data-testid={`card-course-mock-${test.id}`}>
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm line-clamp-2">{test.title}</CardTitle>
+          <div className="flex items-start gap-2 min-w-0">
+            {showTypeBadge && (
+              <Badge className="bg-purple-600 hover:bg-purple-700 text-white border-none text-[10px] px-2 shrink-0 mt-0.5">
+                <FileText className="h-2.5 w-2.5 mr-1" />Mock
+              </Badge>
+            )}
+            <CardTitle className="text-sm line-clamp-2">{test.title}</CardTitle>
+          </div>
           <Badge variant="secondary" className="text-[10px] shrink-0">{test.tag}</Badge>
         </div>
       </CardHeader>
