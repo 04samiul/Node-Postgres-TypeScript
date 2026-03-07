@@ -42,6 +42,9 @@ import {
   XCircle,
   Download,
   KeyRound,
+  UserPlus,
+  Clock,
+  CheckCheck,
 } from "lucide-react";
 import type { User, Course, MockTest, Class, Resource, Notice, TeamMember, HeroBanner } from "@shared/schema";
 import { MOCK_TAGS, CLASS_TAGS, RESOURCE_TAGS, ACCESS_LEVELS, USER_ROLES, NOTICE_TAGS } from "@shared/schema";
@@ -53,6 +56,20 @@ export default function AdminDashboard() {
   useSEO({ title: "Admin Panel", description: "Crack-CU administration dashboard.", path: "/admin", noIndex: true });
 
   const { user } = useAuth();
+
+  const { data: allEnrollments } = useQuery<any[]>({
+    queryKey: ["/api/admin/enrollments"],
+    enabled: !!user && (user.role === "admin" || user.role === "moderator"),
+  });
+  const { data: allUsers } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+    enabled: !!user && (user.role === "admin" || user.role === "moderator"),
+  });
+
+  const pendingCount = allEnrollments?.filter((e) => e.status === "pending").length ?? 0;
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const newUsersCount = allUsers?.filter((u) => new Date(u.createdAt).getTime() > sevenDaysAgo).length ?? 0;
+  const notifCount = pendingCount + newUsersCount;
 
   if (!user || (user.role !== "admin" && user.role !== "moderator")) {
     return <Redirect to="/dashboard" />;
@@ -71,6 +88,15 @@ export default function AdminDashboard() {
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="flex flex-wrap gap-1 h-auto">
           <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
+          <TabsTrigger value="notifications" data-testid="tab-notifications" className="relative">
+            <Bell className="h-3.5 w-3.5 mr-1" />
+            Notifications
+            {notifCount > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none" data-testid="notif-badge">
+                {notifCount}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
           <TabsTrigger value="courses" data-testid="tab-courses">Courses</TabsTrigger>
           <TabsTrigger value="mock-tests" data-testid="tab-mock-tests">Mock Tests</TabsTrigger>
@@ -83,6 +109,7 @@ export default function AdminDashboard() {
         </TabsList>
 
         <TabsContent value="overview"><OverviewTab /></TabsContent>
+        <TabsContent value="notifications"><NotificationsTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="reg-form"><RegFormTab /></TabsContent>
         <TabsContent value="courses"><CoursesTab /></TabsContent>
@@ -2258,6 +2285,171 @@ function TeamTab() {
             </Card>
           ))}
           {(!teamList || teamList.length === 0) && <p className="text-sm text-muted-foreground mt-4">No team members yet.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NotificationsTab() {
+  const { toast } = useToast();
+
+  const { data: enrollments, isLoading: enrollmentsLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/enrollments"],
+  });
+
+  const { data: allUsers, isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+  });
+
+  const updateEnrollment = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      await apiRequest("PATCH", `/api/admin/enrollments/${id}`, { status });
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+      toast({ title: vars.status === "approved" ? "Enrollment approved" : "Enrollment declined" });
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message, variant: "destructive" });
+    },
+  });
+
+  const pendingEnrollments = enrollments?.filter((e) => e.status === "pending") ?? [];
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const newUsers = [...(allUsers ?? [])]
+    .filter((u) => new Date(u.createdAt).getTime() > sevenDaysAgo)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const isEmpty = pendingEnrollments.length === 0 && newUsers.length === 0;
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+          <ClipboardList className="h-4 w-4 text-amber-500" />
+          Pending Enrollment Requests
+          {pendingEnrollments.length > 0 && (
+            <Badge className="bg-amber-500 text-white border-none">{pendingEnrollments.length}</Badge>
+          )}
+        </h2>
+        {enrollmentsLoading ? (
+          <div className="space-y-3">{[1, 2].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
+        ) : pendingEnrollments.length === 0 ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 border rounded-lg">
+            <CheckCheck className="h-4 w-4 text-green-500" />
+            No pending enrollment requests
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {pendingEnrollments.map((e) => (
+              <Card key={e.id} className="border-amber-200 dark:border-amber-800" data-testid={`notif-enrollment-${e.id}`}>
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold">{e.userFullName || e.userName}</p>
+                        <Badge variant="outline" className="text-[10px]">@{e.userName}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Course: <span className="font-medium text-foreground">{e.courseTitle}</span>
+                      </p>
+                      {e.userWhatsapp && (
+                        <p className="text-xs text-muted-foreground">
+                          WhatsApp: <a href={`https://wa.me/88${e.userWhatsapp}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">{e.userWhatsapp}</a>
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Clock className="h-3 w-3" />
+                        {format(new Date(e.createdAt), "MMM dd, yyyy · HH:mm")}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => updateEnrollment.mutate({ id: e.id, status: "approved" })}
+                        disabled={updateEnrollment.isPending}
+                        data-testid={`button-approve-enrollment-${e.id}`}
+                      >
+                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                        onClick={() => updateEnrollment.mutate({ id: e.id, status: "declined" })}
+                        disabled={updateEnrollment.isPending}
+                        data-testid={`button-decline-enrollment-${e.id}`}
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+          <UserPlus className="h-4 w-4 text-blue-500" />
+          New Users (Last 7 Days)
+          {newUsers.length > 0 && (
+            <Badge className="bg-blue-500 text-white border-none">{newUsers.length}</Badge>
+          )}
+        </h2>
+        {usersLoading ? (
+          <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+        ) : newUsers.length === 0 ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 border rounded-lg">
+            <CheckCheck className="h-4 w-4 text-green-500" />
+            No new users in the last 7 days
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {newUsers.map((u) => (
+              <Card key={u.id} className="border-blue-200 dark:border-blue-800" data-testid={`notif-user-${u.id}`}>
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold">{u.fullName}</p>
+                        <Badge variant="outline" className="text-[10px]">@{u.username}</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{u.role}</Badge>
+                        {u.isPremium && <Badge className="bg-yellow-500 text-white border-none text-[10px]">Premium</Badge>}
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 mt-0.5">
+                        {u.whatsapp && (
+                          <p className="text-xs text-muted-foreground">
+                            <a href={`https://wa.me/88${u.whatsapp}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">{u.whatsapp}</a>
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          HSC {u.hscYear} · {u.hscGroup} · {u.hscBoard}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(u.createdAt), "MMM dd, yyyy · HH:mm")}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {isEmpty && !enrollmentsLoading && !usersLoading && (
+        <div className="text-center py-16">
+          <CheckCheck className="h-12 w-12 mx-auto text-green-500/40 mb-3" />
+          <p className="text-muted-foreground font-medium">All clear! No new notifications.</p>
         </div>
       )}
     </div>
