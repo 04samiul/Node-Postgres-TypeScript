@@ -62,6 +62,9 @@ export interface IStorage {
   getUserSubmissions(userId: number): Promise<MockSubmission[]>;
   getSubmissionsByMockTestId(mockTestId: number): Promise<any[]>;
   updateSubmission(id: number, data: Partial<MockSubmission>): Promise<MockSubmission | undefined>;
+  getInProgressSubmission(userId: number, mockTestId: number): Promise<MockSubmission | undefined>;
+  getInProgressSubmissions(userId: number): Promise<any[]>;
+  deleteSubmission(id: number): Promise<boolean>;
 
   updateCourse(id: number, data: Partial<Course>): Promise<Course | undefined>;
   deleteCourse(id: number): Promise<boolean>;
@@ -380,6 +383,34 @@ export class DatabaseStorage implements IStorage {
   async updateSubmission(id: number, data: Partial<MockSubmission>): Promise<MockSubmission | undefined> {
     const [sub] = await db.update(mockSubmissions).set(data).where(eq(mockSubmissions.id, id)).returning();
     return sub;
+  }
+
+  async getInProgressSubmission(userId: number, mockTestId: number): Promise<MockSubmission | undefined> {
+    const [sub] = await db.select().from(mockSubmissions)
+      .where(and(eq(mockSubmissions.userId, userId), eq(mockSubmissions.mockTestId, mockTestId), eq(mockSubmissions.isSubmitted, false)))
+      .orderBy(desc(mockSubmissions.startedAt))
+      .limit(1);
+    return sub;
+  }
+
+  async getInProgressSubmissions(userId: number): Promise<any[]> {
+    return db.select({
+      id: mockSubmissions.id,
+      mockTestId: mockSubmissions.mockTestId,
+      answers: mockSubmissions.answers,
+      remainingTime: mockSubmissions.remainingTime,
+      startedAt: mockSubmissions.startedAt,
+      mockTestTitle: mockTests.title,
+      mockTestDuration: mockTests.duration,
+    }).from(mockSubmissions)
+      .innerJoin(mockTests, eq(mockSubmissions.mockTestId, mockTests.id))
+      .where(and(eq(mockSubmissions.userId, userId), eq(mockSubmissions.isSubmitted, false)))
+      .orderBy(desc(mockSubmissions.startedAt));
+  }
+
+  async deleteSubmission(id: number): Promise<boolean> {
+    const result = await db.delete(mockSubmissions).where(eq(mockSubmissions.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async createEnrollment(data: InsertEnrollment): Promise<Enrollment> {

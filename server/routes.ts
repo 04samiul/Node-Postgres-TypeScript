@@ -816,7 +816,7 @@ export async function registerRoutes(
       const passedOverall = netMarks >= 40;
       const passed = passedEnglish && passedAS && passedPS && passedOverall;
 
-      const submission = await storage.createSubmission({
+      const submissionData = {
         mockTestId,
         userId,
         answers,
@@ -828,8 +828,14 @@ export async function registerRoutes(
         netMarks,
         passed,
         isSubmitted: true,
+        remainingTime: 0,
         submittedAt: new Date(),
-      });
+      };
+      const existingDraft = await storage.getInProgressSubmission(userId, mockTestId);
+      const submission = existingDraft
+        ? await storage.updateSubmission(existingDraft.id, submissionData)
+        : await storage.createSubmission(submissionData);
+      if (!submission) throw new Error("Failed to save submission");
 
       // Send email notification
       try {
@@ -874,6 +880,58 @@ export async function registerRoutes(
       res.status(500).json({ message: error.message || "Submission failed" });
     }
   });
+
+  app.get("/api/mock-tests/:id/in-progress", requireAuth, async (req, res) => {
+    try {
+      const mockTestId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const draft = await storage.getInProgressSubmission(userId, mockTestId);
+      res.json(draft || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/mock-tests/:id/save-progress", requireAuth, async (req, res) => {
+    try {
+      const mockTestId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const { answers, remainingTime } = req.body;
+      const existing = await storage.getInProgressSubmission(userId, mockTestId);
+      if (existing) {
+        const updated = await storage.updateSubmission(existing.id, { answers: answers || {}, remainingTime: remainingTime ?? existing.remainingTime });
+        return res.json(updated);
+      }
+      const created = await storage.createSubmission({ mockTestId, userId, answers: answers || {}, remainingTime, isSubmitted: false });
+      res.json(created);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/my-in-progress", requireAuth, async (req, res) => {
+    try {
+      const drafts = await storage.getInProgressSubmissions(req.session.userId!);
+      res.json(drafts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/mock-submissions/:id", requireAuth, async (req, res) => {
+    try {
+      const subId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const sub = await storage.getSubmission(subId);
+      if (!sub) return res.status(404).json({ message: "Not found" });
+      if (sub.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+      await storage.deleteSubmission(subId);
+      res.json({ ok: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
 
   // ======= ADMIN ROUTES =======
   app.get("/api/admin/stats", requireAdmin, async (_req, res) => {

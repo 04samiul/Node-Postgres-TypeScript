@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { BookOpen, FileText, Play, Calendar, User, Award, Clock, Eye, EyeOff, Crown, Pencil, X, Save, Loader2, KeyRound } from "lucide-react";
@@ -347,48 +348,67 @@ function ChangePasswordCard() {
   );
 }
 
+const ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+
 function RecentSubmissions({ userId }: { userId: number }) {
   const { data: submissions, isLoading } = useQuery<SubmissionWithTitle[]>({
     queryKey: ["/api/my-submissions"],
   });
+  const [dialogMockId, setDialogMockId] = useState<number | null>(null);
+
+  const submitted = submissions?.filter((s) => s.isSubmitted) ?? [];
+
+  const grouped = submitted.reduce<Record<number, SubmissionWithTitle[]>>((acc, sub) => {
+    if (!acc[sub.mockTestId]) acc[sub.mockTestId] = [];
+    acc[sub.mockTestId].push(sub);
+    return acc;
+  }, {});
+
+  const mockGroups = Object.values(grouped).map((group) => {
+    const sorted = [...group].sort((a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime());
+    return { latest: sorted[0], all: sorted, count: sorted.length };
+  }).sort((a, b) => new Date(b.latest.submittedAt!).getTime() - new Date(a.latest.submittedAt!).getTime());
+
+  const dialogGroups = dialogMockId !== null ? grouped[dialogMockId] ?? [] : [];
+  const dialogAttempts = [...dialogGroups].sort((a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime());
 
   return (
     <Card data-testid="card-submissions">
       <CardHeader>
-        <CardTitle className="text-base">Recent Mock Tests</CardTitle>
+        <CardTitle className="text-base">Mock Test Results</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2].map((i) => (<Skeleton key={i} className="h-12 w-full" />))}
           </div>
-        ) : submissions && submissions.length > 0 ? (
+        ) : mockGroups.length > 0 ? (
           <div className="space-y-3">
-            {submissions.slice(0, 10).map((sub) => (
-              <div key={sub.id} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50" data-testid={`submission-${sub.id}`}>
+            {mockGroups.map(({ latest, all, count }) => (
+              <div key={latest.mockTestId} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50" data-testid={`submission-group-${latest.mockTestId}`}>
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{sub.mockTestTitle || `Mock #${sub.mockTestId}`}</p>
+                    <p className="text-sm font-medium truncate">{latest.mockTestTitle || `Mock #${latest.mockTestId}`}</p>
                     <p className="text-xs text-muted-foreground">
-                      {sub.submittedAt ? format(new Date(sub.submittedAt), "MMM dd, yyyy") : "In progress"}
+                      {count > 1 ? `${count} attempts · Latest: ` : ""}{latest.submittedAt ? format(new Date(latest.submittedAt), "MMM dd, yyyy") : ""}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {sub.isSubmitted ? (
-                    <>
-                      <Badge variant={sub.passed ? "default" : "destructive"} className={sub.passed ? "bg-green-600" : ""}>
-                        {sub.netMarks?.toFixed(1)}
-                      </Badge>
-                      <Link href={`/mock-review/${sub.id}`}>
-                        <Button size="sm" variant="outline" data-testid={`button-review-${sub.id}`}>
-                          <Eye className="h-3.5 w-3.5 mr-1" /> Review
-                        </Button>
-                      </Link>
-                    </>
+                  <Badge variant={latest.passed ? "default" : "destructive"} className={latest.passed ? "bg-green-600" : ""}>
+                    {latest.netMarks?.toFixed(1)}
+                  </Badge>
+                  {count === 1 ? (
+                    <Link href={`/mock-review/${latest.id}`}>
+                      <Button size="sm" variant="outline" data-testid={`button-review-${latest.id}`}>
+                        <Eye className="h-3.5 w-3.5 mr-1" /> Preview
+                      </Button>
+                    </Link>
                   ) : (
-                    <Badge variant="outline">Ongoing</Badge>
+                    <Button size="sm" variant="outline" onClick={() => setDialogMockId(latest.mockTestId)} data-testid={`button-review-group-${latest.mockTestId}`}>
+                      <Eye className="h-3.5 w-3.5 mr-1" /> Preview
+                    </Button>
                   )}
                 </div>
               </div>
@@ -398,6 +418,39 @@ function RecentSubmissions({ userId }: { userId: number }) {
           <p className="text-sm text-muted-foreground">No mock test submissions yet.</p>
         )}
       </CardContent>
+
+      <Dialog open={dialogMockId !== null} onOpenChange={(open) => { if (!open) setDialogMockId(null); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-attempts">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              {dialogAttempts[0]?.mockTestTitle || "Attempts"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-1">
+            {dialogAttempts.map((sub, idx) => {
+              const attemptLabel = ORDINALS[dialogAttempts.length - 1 - idx] || `${dialogAttempts.length - idx}th`;
+              return (
+                <div key={sub.id} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50" data-testid={`attempt-row-${sub.id}`}>
+                  <div>
+                    <p className="text-sm font-medium">{attemptLabel} Attempt</p>
+                    <p className="text-xs text-muted-foreground">{sub.submittedAt ? format(new Date(sub.submittedAt), "MMM dd, yyyy HH:mm") : ""}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={sub.passed ? "default" : "destructive"} className={sub.passed ? "bg-green-600" : ""}>
+                      {sub.netMarks?.toFixed(1)}
+                    </Badge>
+                    <Link href={`/mock-review/${sub.id}`} onClick={() => setDialogMockId(null)}>
+                      <Button size="sm" variant="outline" data-testid={`button-review-attempt-${sub.id}`}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

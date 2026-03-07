@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest } from "@/lib/queryClient";
-import { Clock, Send, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Clock, Send, AlertTriangle, CheckCircle2, XCircle, Play, RotateCcw } from "lucide-react";
 import type { MockTest, MockSubmission } from "@shared/schema";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
@@ -32,6 +32,7 @@ const SECTION_COLORS: Record<string, string> = {
   PS: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
 };
 
+type ExamMode = "checking" | "prompt" | "exam" | "submitted";
 
 export default function MockExamPage() {
   useSEO({ title: "Mock Exam", description: "Take your Chittagong University admission mock test. Timed exam with auto-grading.", noIndex: true });
@@ -41,38 +42,84 @@ export default function MockExamPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const [mode, setMode] = useState<ExamMode>("checking");
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<MockSubmission | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const draftIdRef = useRef<number | null>(null);
+  const lastSavedRef = useRef<string>("");
 
   const { data: test, isLoading, error } = useQuery<MockTest>({
     queryKey: ["/api/mock-tests", id],
     enabled: !!id && !!user,
   });
 
-  const questions: Question[] = test && Array.isArray(test.questions) ? test.questions as Question[] : [];
+  const { data: draft, isLoading: draftLoading } = useQuery<MockSubmission | null>({
+    queryKey: ["/api/mock-tests", id, "in-progress"],
+    queryFn: async () => {
+      const res = await fetch(`/api/mock-tests/${id}/in-progress`, { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!id && !!user && !!test,
+  });
 
   useEffect(() => {
-    if (test && !submitted) {
+    if (draftLoading || !test) return;
+    if (draft) {
+      draftIdRef.current = draft.id;
+      setMode("prompt");
+    } else {
       setTimeLeft(test.duration * 60);
+      setMode("exam");
     }
-  }, [test, submitted]);
+  }, [draft, draftLoading, test]);
+
+  const saveProgressMutation = useMutation({
+    mutationFn: async (data: { answers: Record<string, number>; remainingTime: number }) => {
+      const res = await apiRequest("POST", `/api/mock-tests/${id}/save-progress`, data);
+      const json = await res.json();
+      draftIdRef.current = json.id;
+      return json;
+    },
+  });
+
+  const saveProgress = useCallback((currentAnswers: Record<string, number>, currentTime: number) => {
+    const key = JSON.stringify(currentAnswers) + currentTime;
+    if (key === lastSavedRef.current) return;
+    lastSavedRef.current = key;
+    saveProgressMutation.mutate({ answers: currentAnswers, remainingTime: currentTime });
+  }, []);
 
   useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0 || submitted) return;
+    if (mode !== "exam" || timeLeft === null) return;
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev === null || prev <= 1) {
           handleAutoSubmit();
           return 0;
         }
+        if (prev % 30 === 0) {
+          saveProgress(answers, prev);
+        }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [timeLeft, submitted]);
+  }, [mode, timeLeft, answers]);
+
+  useEffect(() => {
+    if (mode !== "exam") return;
+    const handleUnload = () => {
+      if (timeLeft !== null && timeLeft > 0) {
+        const blob = new Blob([JSON.stringify({ answers, remainingTime: timeLeft })], { type: "application/json" });
+        navigator.sendBeacon(`/api/mock-tests/${id}/save-progress`, blob);
+      }
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [mode, answers, timeLeft, id]);
 
   const submitMutation = useMutation({
     mutationFn: async (data: { answers: Record<string, number> }) => {
@@ -81,7 +128,10 @@ export default function MockExamPage() {
     },
     onSuccess: (data: MockSubmission) => {
       setResult(data);
-      setSubmitted(true);
+      setMode("submitted");
+      draftIdRef.current = null;
+      queryClient.invalidateQueries({ queryKey: ["/api/my-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-in-progress"] });
       toast({ title: "Mock test submitted! Check your email for results." });
     },
     onError: (error: Error) => {
@@ -89,15 +139,54 @@ export default function MockExamPage() {
     },
   });
 
-  const handleSubmit = () => {
-    submitMutation.mutate({ answers });
-  };
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (draftId: number) => {
+      await apiRequest("DELETE", `/api/mock-submissions/${draftId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-in-progress"] });
+    },
+  });
+
+  const handleSubmit = () => submitMutation.mutate({ answers });
 
   const handleAutoSubmit = useCallback(() => {
-    if (!submitted && !submitMutation.isPending) {
+    if (mode === "exam" && !submitMutation.isPending) {
       submitMutation.mutate({ answers });
     }
-  }, [answers, submitted, submitMutation.isPending]);
+  }, [answers, mode, submitMutation.isPending]);
+
+  const handleResume = () => {
+    if (!draft || !test) return;
+    const savedAnswers = (draft.answers as Record<string, number>) || {};
+    setAnswers(savedAnswers);
+    const savedTime = draft.remainingTime ?? test.duration * 60;
+    setTimeLeft(savedTime > 0 ? savedTime : test.duration * 60);
+    setMode("exam");
+  };
+
+  const handleRestart = async () => {
+    if (draftIdRef.current) {
+      await deleteDraftMutation.mutateAsync(draftIdRef.current);
+      draftIdRef.current = null;
+    } else if (draft) {
+      await deleteDraftMutation.mutateAsync(draft.id);
+    }
+    setAnswers({});
+    setTimeLeft(test!.duration * 60);
+    setMode("exam");
+    queryClient.invalidateQueries({ queryKey: ["/api/mock-tests", id, "in-progress"] });
+  };
+
+  const handleReExam = async () => {
+    setResult(null);
+    setAnswers({});
+    setTimeLeft(test!.duration * 60);
+    lastSavedRef.current = "";
+    draftIdRef.current = null;
+    setMode("exam");
+    queryClient.invalidateQueries({ queryKey: ["/api/mock-tests", id, "in-progress"] });
+  };
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -114,7 +203,7 @@ export default function MockExamPage() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || (mode === "checking" && draftLoading)) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <Skeleton className="h-8 w-1/2 mb-4" />
@@ -133,7 +222,52 @@ export default function MockExamPage() {
     );
   }
 
-  if (submitted && result) {
+  if (mode === "prompt" && draft) {
+    const savedAnswerCount = Object.keys((draft.answers as object) || {}).length;
+    const savedTime = draft.remainingTime;
+    return (
+      <div className="max-w-md mx-auto px-4 py-16" data-testid="page-exam-prompt">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+          <Card>
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-3">
+                <Clock className="h-14 w-14 text-amber-500" />
+              </div>
+              <CardTitle className="text-xl">Unfinished Exam Found</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <p className="text-muted-foreground">You have an unsubmitted attempt for <strong>{test.title}</strong>.</p>
+              <div className="flex justify-center gap-4 text-sm">
+                <div className="bg-muted rounded-lg px-4 py-2">
+                  <p className="text-muted-foreground text-xs">Answered</p>
+                  <p className="font-bold text-lg">{savedAnswerCount}</p>
+                </div>
+                {savedTime !== null && savedTime !== undefined && (
+                  <div className="bg-muted rounded-lg px-4 py-2">
+                    <p className="text-muted-foreground text-xs">Time Left</p>
+                    <p className="font-bold text-lg font-mono">{formatTime(savedTime)}</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2 pt-2">
+                <Button onClick={handleResume} className="w-full gap-2" data-testid="button-resume-exam" disabled={deleteDraftMutation.isPending}>
+                  <Play className="h-4 w-4" /> Resume Exam
+                </Button>
+                <Button variant="outline" onClick={handleRestart} className="w-full gap-2" data-testid="button-restart-exam" disabled={deleteDraftMutation.isPending}>
+                  <RotateCcw className="h-4 w-4" /> Start Fresh
+                </Button>
+              </div>
+              <Link href="/mock-tests">
+                <Button variant="ghost" size="sm" className="text-muted-foreground">Back to Mock Tests</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (mode === "submitted" && result) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8" data-testid="page-mock-result">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
@@ -175,13 +309,16 @@ export default function MockExamPage() {
                 <p className="text-xs text-muted-foreground">(Pass mark: 40 overall, English 13, AS 10, PS 10)</p>
               </div>
 
-              <div className="flex justify-center gap-2 pt-4">
+              <div className="flex justify-center gap-2 pt-4 flex-wrap">
                 <Link href="/mock-tests">
                   <Button variant="outline" data-testid="button-back-to-mocks">Back to Mock Tests</Button>
                 </Link>
                 <Link href="/dashboard">
-                  <Button data-testid="button-go-dashboard">Dashboard</Button>
+                  <Button variant="outline" data-testid="button-go-dashboard">Dashboard</Button>
                 </Link>
+                <Button onClick={handleReExam} data-testid="button-re-exam" className="gap-2">
+                  <RotateCcw className="h-4 w-4" /> Re-exam
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -190,6 +327,7 @@ export default function MockExamPage() {
     );
   }
 
+  const questions: Question[] = test && Array.isArray(test.questions) ? test.questions as Question[] : [];
   const answeredCount = Object.keys(answers).length;
 
   return (

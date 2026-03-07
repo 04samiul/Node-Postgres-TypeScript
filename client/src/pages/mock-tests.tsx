@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { Clock, Play, Calendar, FileText, Crown, BookOpen, Lock } from "lucide-react";
+import { Clock, Play, Calendar, FileText, Crown, BookOpen, Lock, RotateCcw } from "lucide-react";
 import type { MockTest, Enrollment } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 const FILTER_TAGS = ["All", "Free", "CU Mock", "English", "Analytical Skill", "Problem Solving"];
 
@@ -57,12 +60,28 @@ export default function MockTestsPage() {
     queryKey: ["/api/mock-tests"],
   });
   const { user } = useAuth();
+  const { toast } = useToast();
   const [filter, setFilter] = useState("All");
   const [, setTick] = useState(0);
 
   const { data: enrollments } = useQuery<Enrollment[]>({
     queryKey: ["/api/my-enrollments"],
     enabled: !!user,
+  });
+
+  const { data: inProgressMocks } = useQuery<any[]>({
+    queryKey: ["/api/my-in-progress"],
+    enabled: !!user,
+  });
+
+  const restartMutation = useMutation({
+    mutationFn: async (draftId: number) => {
+      await apiRequest("DELETE", `/api/mock-submissions/${draftId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-in-progress"] });
+      toast({ title: "Exam reset. Start fresh anytime." });
+    },
   });
 
   const enrolledCourseIds = new Set(enrollments?.filter(e => e.status === "approved").map(e => e.courseId) ?? []);
@@ -79,6 +98,50 @@ export default function MockTestsPage() {
         <h1 className="text-2xl font-bold tracking-tight mb-2" data-testid="heading-mock-tests">Mock Tests</h1>
         <p className="text-muted-foreground mb-6">Practice with our mock tests for CU admission</p>
       </motion.div>
+
+      {user && inProgressMocks && inProgressMocks.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <h2 className="text-base font-semibold mb-3 flex items-center gap-2 text-amber-600 dark:text-amber-400">
+            <Clock className="h-4 w-4" /> Unsubmitted Exams
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {inProgressMocks.map((draft) => {
+              const answeredCount = Object.keys((draft.answers as object) || {}).length;
+              const timeLeft = draft.remainingTime;
+              const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+              return (
+                <Card key={draft.id} className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/10" data-testid={`card-inprogress-${draft.id}`}>
+                  <CardContent className="pt-4 pb-3">
+                    <p className="font-medium text-sm mb-1 line-clamp-1">{draft.mockTestTitle}</p>
+                    <div className="flex gap-3 text-xs text-muted-foreground mb-3">
+                      <span>{answeredCount} answered</span>
+                      {timeLeft !== null && timeLeft !== undefined && <span className="font-mono">{formatTime(timeLeft)} left</span>}
+                      <span>{format(new Date(draft.startedAt), "MMM d")}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href={`/mock-tests/${draft.mockTestId}`} className="flex-1">
+                        <Button size="sm" className="w-full gap-1" data-testid={`button-resume-${draft.id}`}>
+                          <Play className="h-3.5 w-3.5" /> Resume
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => restartMutation.mutate(draft.id)}
+                        disabled={restartMutation.isPending}
+                        data-testid={`button-discard-${draft.id}`}
+                        title="Discard and start fresh next time"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       <div className="flex flex-wrap gap-2 mb-6">
         {FILTER_TAGS.map((tag) => (
