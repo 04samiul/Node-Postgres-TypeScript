@@ -1052,6 +1052,7 @@ function MockTestForm({
             <p className="text-xs text-muted-foreground mb-2">
               Format: [{`{ "id": 1, "section": "EngP", "question": "...", "image": null, "passage": null, "options": ["A","B","C","D"], "correctAnswer": 0 }`}]
               <br />Sections: EngP, EngO, AS, PS. correctAnswer: 0=A, 1=B, 2=C, 3=D
+              <br />Math: use <code className="bg-muted px-1 rounded text-[11px]">$\frac{"{1}"}{"{2}"}$</code> for inline, <code className="bg-muted px-1 rounded text-[11px]">$$E=mc^2$$</code> for display math. Supports fractions, roots (<code className="bg-muted px-1 rounded text-[11px]">\sqrt{"{x}"}</code>), superscripts (<code className="bg-muted px-1 rounded text-[11px]">x^2</code>), Greek letters (<code className="bg-muted px-1 rounded text-[11px]">\alpha, \beta</code>), etc.
             </p>
             <Textarea
               value={questionsJson}

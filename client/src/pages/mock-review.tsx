@@ -10,6 +10,7 @@ import { AlertTriangle, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
 import type { MockSubmission } from "@shared/schema";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
+import { renderMath } from "@/lib/render-math";
 
 interface Question {
   id: number;
@@ -37,19 +38,6 @@ const SECTION_COLORS: Record<string, string> = {
   PS: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
 };
 
-function renderHtml(text: string) {
-  const sanitized = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/&lt;b&gt;/gi, "<b>")
-    .replace(/&lt;\/b&gt;/gi, "</b>")
-    .replace(/&lt;u&gt;/gi, "<u>")
-    .replace(/&lt;\/u&gt;/gi, "</u>")
-    .replace(/&lt;i&gt;/gi, "<i>")
-    .replace(/&lt;\/i&gt;/gi, "</i>");
-  return sanitized;
-}
 
 export default function MockReviewPage() {
   useSEO({ title: "Mock Test Review", description: "Review your mock test answers and see correct solutions.", noIndex: true });
@@ -167,7 +155,7 @@ export default function MockReviewPage() {
                   {q.passage && (
                     <div
                       className="bg-muted p-3 rounded-md text-sm leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: renderHtml(q.passage) }}
+                      dangerouslySetInnerHTML={{ __html: renderMath(q.passage) }}
                     />
                   )}
 
@@ -177,7 +165,7 @@ export default function MockReviewPage() {
 
                   <p
                     className="text-sm font-medium"
-                    dangerouslySetInnerHTML={{ __html: renderHtml(q.question) }}
+                    dangerouslySetInnerHTML={{ __html: renderMath(q.question) }}
                   />
 
                   <div className="space-y-2">
@@ -209,7 +197,7 @@ export default function MockReviewPage() {
                           </span>
                           <span
                             className="text-sm flex-1"
-                            dangerouslySetInnerHTML={{ __html: renderHtml(opt) }}
+                            dangerouslySetInnerHTML={{ __html: renderMath(opt) }}
                           />
                           {isCorrectOption && (
                             <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
