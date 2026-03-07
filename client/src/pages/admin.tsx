@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -733,7 +734,7 @@ function CoursesTab() {
               </div>
               <div>
                 <Label className="text-xs">Description</Label>
-                <Textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
+                <RichTextEditor value={formData.description || ""} onChange={(val) => setFormData({ ...formData, description: val })} placeholder="Enter description..." />
               </div>
               <ImageUploader
                 label="Banner Image"
@@ -1494,7 +1495,7 @@ function ClassesTab() {
               </div>
               <div>
                 <Label className="text-xs">Description</Label>
-                <Textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+                <RichTextEditor value={formData.description || ""} onChange={(val) => setFormData({ ...formData, description: val })} placeholder="Enter description..." />
               </div>
               <div>
                 <Label className="text-xs">Course (optional)</Label>
@@ -1564,7 +1565,7 @@ function ClassesTab() {
                     </div>
                     <div>
                       <Label className="text-xs">Description</Label>
-                      <Textarea value={editData.description || ""} onChange={(e) => setEditData({ ...editData, description: e.target.value })} />
+                      <RichTextEditor value={editData.description || ""} onChange={(val) => setEditData({ ...editData, description: val })} placeholder="Enter description..." />
                     </div>
                     <div>
                       <Label className="text-xs">Course (optional)</Label>
@@ -1696,7 +1697,7 @@ function ResourcesTab() {
               </div>
               <div>
                 <Label className="text-xs">Description</Label>
-                <Textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+                <RichTextEditor value={formData.description || ""} onChange={(val) => setFormData({ ...formData, description: val })} placeholder="Enter description..." />
               </div>
               <div>
                 <Label className="text-xs">Course (optional)</Label>
@@ -1811,7 +1812,7 @@ function NoticesTab() {
               </div>
               <div>
                 <Label className="text-xs">Description</Label>
-                <Textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
+                <RichTextEditor value={formData.description || ""} onChange={(val) => setFormData({ ...formData, description: val })} placeholder="Enter description..." />
               </div>
               <div>
                 <Label className="text-xs">Tag</Label>
@@ -1934,7 +1935,7 @@ function BannersTab() {
               </div>
               <div>
                 <Label className="text-xs">Description</Label>
-                <Textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+                <RichTextEditor value={formData.description || ""} onChange={(val) => setFormData({ ...formData, description: val })} placeholder="Enter description..." />
               </div>
               <ImageUploader
                 label="Banner Image"
@@ -2049,7 +2050,7 @@ function TeamTab() {
               />
               <div>
                 <Label className="text-xs">Description</Label>
-                <Textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+                <RichTextEditor value={formData.description || ""} onChange={(val) => setFormData({ ...formData, description: val })} placeholder="Enter description..." />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

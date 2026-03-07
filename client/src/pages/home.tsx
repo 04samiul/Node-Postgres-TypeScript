@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionHeader } from "@/components/section-header";
+import { RichTextDisplay } from "@/components/rich-text-editor";
 import { Link } from "wouter";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { format } from "date-fns";
@@ -178,15 +179,15 @@ function HeroSection() {
                   </motion.h2>
                 )}
                 {currentBanner.description && (
-                  <motion.p
+                  <motion.div
                     className="text-sm md:text-base text-white/80 max-w-xl"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                     data-testid={`hero-banner-desc-${currentBanner.id}`}
                   >
-                    {currentBanner.description}
-                  </motion.p>
+                    <RichTextDisplay content={currentBanner.description} />
+                  </motion.div>
                 )}
               </div>
             </>
@@ -347,9 +348,9 @@ function CoursesSection() {
                 </div>
               </CardHeader>
               <CardContent className="flex-1">
-                <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-course-desc-${course.id}`}>
-                  {course.description}
-                </p>
+                <div className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-course-desc-${course.id}`}>
+                  <RichTextDisplay content={course.description || ""} />
+                </div>
               </CardContent>
               <CardFooter className="gap-2 flex-wrap">
                 <Link href={`/courses/${course.id}`}>
@@ -796,9 +797,9 @@ function NoticesSection() {
                   <Calendar className="h-3.5 w-3.5" />
                   <span data-testid={`text-notice-date-${notice.id}`}>{format(new Date(notice.createdAt), "MMM dd, yyyy")}</span>
                 </div>
-                <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-notice-desc-${notice.id}`}>
-                  {notice.description}
-                </p>
+                <div className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-notice-desc-${notice.id}`}>
+                  <RichTextDisplay content={notice.description || ""} />
+                </div>
               </CardContent>
               <CardFooter className="gap-2 flex-wrap">
                 <Button variant="outline" size="sm" onClick={() => setDetailNotice(notice)} data-testid={`button-notice-read-more-${notice.id}`}>
@@ -833,9 +834,9 @@ function NoticesSection() {
                 {detailNotice?.createdAt && format(new Date(detailNotice.createdAt), "MMM dd, yyyy")}
               </span>
             </div>
-            <DialogDescription className="text-sm whitespace-pre-wrap" data-testid="text-detail-notice-desc">
-              {detailNotice?.description}
-            </DialogDescription>
+            <div className="text-sm" data-testid="text-detail-notice-desc">
+              <RichTextDisplay content={detailNotice?.description || ""} />
+            </div>
             {detailNotice?.url && (
               <a href={detailNotice.url} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" data-testid="button-detail-notice-visit">

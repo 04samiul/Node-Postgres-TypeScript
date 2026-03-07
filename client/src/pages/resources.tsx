@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { RichTextDisplay } from "@/components/rich-text-editor";
 import { format } from "date-fns";
 import { Calendar, Download, FileText, Crown, BookOpen, Lock } from "lucide-react";
 import type { Resource, Enrollment } from "@shared/schema";
@@ -100,7 +101,7 @@ export default function ResourcesPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1">
-                  {resource.description && <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{resource.description}</p>}
+                  {resource.description && <div className="text-sm text-muted-foreground line-clamp-2 mb-2"><RichTextDisplay content={resource.description} /></div>}
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     <span>{format(new Date(resource.createdAt), "MMM dd, yyyy")}</span>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RichTextDisplay } from "@/components/rich-text-editor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -194,7 +195,7 @@ export default function CourseDetailPage() {
         </div>
 
         {course.description && (
-          <p className="text-muted-foreground whitespace-pre-wrap mb-6" data-testid="text-course-desc">{course.description}</p>
+          <div className="text-muted-foreground mb-6" data-testid="text-course-desc"><RichTextDisplay content={course.description || ""} /></div>
         )}
 
         <div className="mb-6">
@@ -322,7 +323,7 @@ function ClassCard({ cls, isEnrolled }: { cls: Class; isEnrolled: boolean }) {
         <CardTitle className="text-sm line-clamp-2">{cls.title}</CardTitle>
       </CardHeader>
       <CardContent className="flex-1">
-        {cls.description && <p className="text-xs text-muted-foreground line-clamp-2">{cls.description}</p>}
+        {cls.description && <div className="text-xs text-muted-foreground line-clamp-2"><RichTextDisplay content={cls.description} /></div>}
         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
           <Badge variant="secondary" className="text-[10px]">{cls.tag}</Badge>
         </div>
@@ -357,7 +358,7 @@ function ResourceCard({ resource, isEnrolled }: { resource: Resource; isEnrolled
         </div>
       </CardHeader>
       <CardContent className="flex-1">
-        {resource.description && <p className="text-xs text-muted-foreground line-clamp-2">{resource.description}</p>}
+        {resource.description && <div className="text-xs text-muted-foreground line-clamp-2"><RichTextDisplay content={resource.description} /></div>}
       </CardContent>
       <CardFooter className="pt-0">
         {isEnrolled ? (
