@@ -403,7 +403,7 @@ export class DatabaseStorage implements IStorage {
         courseBanner: courses.bannerImage,
       })
       .from(enrollments)
-      .leftJoin(courses, eq(courses.id, enrollments.courseId))
+      .innerJoin(courses, eq(courses.id, enrollments.courseId))
       .where(eq(enrollments.userId, userId))
       .orderBy(desc(enrollments.createdAt));
     return rows.map((r) => ({ ...r, courseTitle: r.courseTitle ?? "", courseBanner: r.courseBanner ?? null }));
