@@ -1652,6 +1652,8 @@ function ResourcesTab() {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<Record<string, any>>({});
   const deleteMutation = useDeleteMutation("/api/admin/resources", "/api/admin/resources");
 
   const createMutation = useMutation({
@@ -1668,6 +1670,33 @@ function ResourcesTab() {
       toast({ title: error.message, variant: "destructive" });
     },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      await apiRequest("PATCH", `/api/admin/resources/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/resources"] });
+      toast({ title: "Resource updated" });
+      setEditingId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
+    },
+  });
+
+  const startEdit = (r: Resource) => {
+    setEditingId(r.id);
+    setEditData({
+      title: r.title,
+      fileUrl: r.fileUrl,
+      tag: r.tag,
+      description: r.description || "",
+      access: r.access,
+      isVisible: r.isVisible,
+      courseId: r.courseId ?? "__none__",
+    });
+  };
 
   return (
     <div>
@@ -1741,30 +1770,60 @@ function ResourcesTab() {
         <div className="space-y-2 mt-4">
           {resourceList?.map((r) => (
             <Card key={r.id} data-testid={`card-resource-${r.id}`}>
-              <CardContent className="pt-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{r.title}</p>
-                  <div className="flex items-center gap-2 flex-wrap mt-1">
-                    <Badge variant="secondary" className="text-xs">{r.tag}</Badge>
-                    <span className="text-xs text-muted-foreground">{r.access}</span>
-                    {r.courseId && courseList?.find((c) => c.id === r.courseId) && (
-                      <Badge variant="outline" className="text-xs" data-testid={`badge-resource-course-${r.id}`}>{courseList.find((c) => c.id === r.courseId)!.title}</Badge>
-                    )}
+              <CardContent className="pt-4">
+                {editingId === r.id ? (
+                  <form onSubmit={(e) => { e.preventDefault(); const courseIdVal = editData.courseId && editData.courseId !== "__none__" ? Number(editData.courseId) : null; updateMutation.mutate({ id: r.id, data: { ...editData, courseId: courseIdVal } }); }} className="space-y-3">
+                    <div><Label className="text-xs">Title</Label><Input value={editData.title || ""} onChange={(e) => setEditData({ ...editData, title: e.target.value })} required /></div>
+                    <div><Label className="text-xs">File URL</Label><Input value={editData.fileUrl || ""} onChange={(e) => setEditData({ ...editData, fileUrl: e.target.value })} required /></div>
+                    <div>
+                      <Label className="text-xs">Tag</Label>
+                      <Select value={editData.tag || ""} onValueChange={(v) => setEditData({ ...editData, tag: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{RESOURCE_TAGS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div><Label className="text-xs">Description</Label><RichTextEditor value={editData.description || ""} onChange={(val) => setEditData({ ...editData, description: val })} placeholder="Enter description..." /></div>
+                    <div>
+                      <Label className="text-xs">Course (optional)</Label>
+                      <Select value={String(editData.courseId || "__none__")} onValueChange={(v) => setEditData({ ...editData, courseId: v })}>
+                        <SelectTrigger><SelectValue placeholder="Standalone (no course)" /></SelectTrigger>
+                        <SelectContent><SelectItem value="__none__">Standalone (no course)</SelectItem>{courseList?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Access</Label>
+                        <Select value={editData.access || "all"} onValueChange={(v) => setEditData({ ...editData, access: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{ACCESS_LEVELS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2 pt-5"><Label className="text-xs">Visible</Label><Switch checked={editData.isVisible ?? true} onCheckedChange={(v) => setEditData({ ...editData, isVisible: v })} /></div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit" size="sm" disabled={updateMutation.isPending}>{updateMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}Save</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingId(null)}>Cancel</Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{r.title}</p>
+                      <div className="flex items-center gap-2 flex-wrap mt-1">
+                        <Badge variant="secondary" className="text-xs">{r.tag}</Badge>
+                        <span className="text-xs text-muted-foreground">{r.access}</span>
+                        {r.courseId && courseList?.find((c) => c.id === r.courseId) && (
+                          <Badge variant="outline" className="text-xs" data-testid={`badge-resource-course-${r.id}`}>{courseList.find((c) => c.id === r.courseId)!.title}</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={r.isVisible ? "default" : "outline"}>{r.isVisible ? "Visible" : "Hidden"}</Badge>
+                      <Button size="icon" variant="ghost" onClick={() => startEdit(r)} data-testid={`button-edit-resource-${r.id}`}><Pencil className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this resource?")) deleteMutation.mutate(r.id); }} data-testid={`button-delete-resource-${r.id}`}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Badge variant={r.isVisible ? "default" : "outline"}>
-                    {r.isVisible ? "Visible" : "Hidden"}
-                  </Badge>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => { if (confirm("Delete this resource?")) deleteMutation.mutate(r.id); }}
-                    data-testid={`button-delete-resource-${r.id}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -1780,6 +1839,8 @@ function NoticesTab() {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<Record<string, any>>({});
   const deleteMutation = useDeleteMutation("/api/admin/notices", "/api/admin/notices");
 
   const createMutation = useMutation({
@@ -1796,6 +1857,32 @@ function NoticesTab() {
       toast({ title: error.message, variant: "destructive" });
     },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      await apiRequest("PATCH", `/api/admin/notices/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/notices"] });
+      toast({ title: "Notice updated" });
+      setEditingId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
+    },
+  });
+
+  const startEdit = (n: Notice) => {
+    setEditingId(n.id);
+    setEditData({
+      title: n.title,
+      description: n.description || "",
+      tag: n.tag,
+      url: n.url || "",
+      date: n.date || null,
+      isVisible: n.isVisible,
+    });
+  };
 
   return (
     <div>
@@ -1866,28 +1953,56 @@ function NoticesTab() {
         <div className="space-y-2 mt-4">
           {noticeList?.map((n) => (
             <Card key={n.id} data-testid={`card-notice-${n.id}`}>
-              <CardContent className="pt-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{n.title}</p>
-                  <div className="flex items-center gap-2 flex-wrap mt-1">
-                    <Badge variant="secondary" className="text-xs">{n.tag}</Badge>
-                    <span className="text-xs text-muted-foreground">{n.date ? format(new Date(n.date), "PP") : n.createdAt ? format(new Date(n.createdAt), "PP") : ""}</span>
-                    {n.url && <Badge variant="outline" className="text-xs">Has Link</Badge>}
+              <CardContent className="pt-4">
+                {editingId === n.id ? (
+                  <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: n.id, data: { ...editData, isVisible: editData.isVisible ?? true } }); }} className="space-y-3">
+                    <div><Label className="text-xs">Title</Label><Input value={editData.title || ""} onChange={(e) => setEditData({ ...editData, title: e.target.value })} required /></div>
+                    <div><Label className="text-xs">Description</Label><RichTextEditor value={editData.description || ""} onChange={(val) => setEditData({ ...editData, description: val })} placeholder="Enter description..." /></div>
+                    <div>
+                      <Label className="text-xs">Tag</Label>
+                      <Select value={editData.tag || ""} onValueChange={(v) => setEditData({ ...editData, tag: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{NOTICE_TAGS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div><Label className="text-xs">URL (optional)</Label><Input value={editData.url || ""} onChange={(e) => setEditData({ ...editData, url: e.target.value })} placeholder="https://example.com" /></div>
+                    <div>
+                      <Label className="text-xs">Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full justify-start text-left font-normal">
+                            <Calendar className="h-3.5 w-3.5 mr-2" />
+                            {editData.date ? format(new Date(editData.date), "PPP") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent mode="single" selected={editData.date ? new Date(editData.date) : undefined} onSelect={(d) => setEditData({ ...editData, date: d?.toISOString() || null })} />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="flex items-center gap-2"><Label className="text-xs">Visible</Label><Switch checked={editData.isVisible ?? true} onCheckedChange={(v) => setEditData({ ...editData, isVisible: v })} /></div>
+                    <div className="flex gap-2">
+                      <Button type="submit" size="sm" disabled={updateMutation.isPending}>{updateMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}Save</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingId(null)}>Cancel</Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{n.title}</p>
+                      <div className="flex items-center gap-2 flex-wrap mt-1">
+                        <Badge variant="secondary" className="text-xs">{n.tag}</Badge>
+                        <span className="text-xs text-muted-foreground">{n.date ? format(new Date(n.date), "PP") : n.createdAt ? format(new Date(n.createdAt), "PP") : ""}</span>
+                        {n.url && <Badge variant="outline" className="text-xs">Has Link</Badge>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={n.isVisible ? "default" : "outline"}>{n.isVisible ? "Visible" : "Hidden"}</Badge>
+                      <Button size="icon" variant="ghost" onClick={() => startEdit(n)} data-testid={`button-edit-notice-${n.id}`}><Pencil className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this notice?")) deleteMutation.mutate(n.id); }} data-testid={`button-delete-notice-${n.id}`}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Badge variant={n.isVisible ? "default" : "outline"}>
-                    {n.isVisible ? "Visible" : "Hidden"}
-                  </Badge>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => { if (confirm("Delete this notice?")) deleteMutation.mutate(n.id); }}
-                    data-testid={`button-delete-notice-${n.id}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -2009,6 +2124,8 @@ function TeamTab() {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<Record<string, any>>({});
   const deleteMutation = useDeleteMutation("/api/admin/team", "/api/admin/team");
 
   const createMutation = useMutation({
@@ -2025,6 +2142,32 @@ function TeamTab() {
       toast({ title: error.message, variant: "destructive" });
     },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      await apiRequest("PATCH", `/api/admin/team/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/team"] });
+      toast({ title: "Team member updated" });
+      setEditingId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
+    },
+  });
+
+  const startEdit = (m: TeamMember) => {
+    setEditingId(m.id);
+    setEditData({
+      name: m.name,
+      post: m.post,
+      photo: m.photo || "",
+      description: m.description || "",
+      sortOrder: m.sortOrder ?? 0,
+      isVisible: m.isVisible,
+    });
+  };
 
   return (
     <div>
@@ -2079,27 +2222,38 @@ function TeamTab() {
         <div className="space-y-2 mt-4">
           {teamList?.map((m) => (
             <Card key={m.id} data-testid={`card-team-${m.id}`}>
-              <CardContent className="pt-4 flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex gap-3 min-w-0">
-                  {m.photo && <img src={m.photo} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />}
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{m.name}</p>
-                    <p className="text-xs text-muted-foreground">{m.post}</p>
+              <CardContent className="pt-4">
+                {editingId === m.id ? (
+                  <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: m.id, data: { ...editData, isVisible: editData.isVisible ?? true, sortOrder: Number(editData.sortOrder) || 0 } }); }} className="space-y-3">
+                    <div><Label className="text-xs">Name</Label><Input value={editData.name || ""} onChange={(e) => setEditData({ ...editData, name: e.target.value })} required /></div>
+                    <div><Label className="text-xs">Post / Title</Label><Input value={editData.post || ""} onChange={(e) => setEditData({ ...editData, post: e.target.value })} required /></div>
+                    <ImageUploader label="Photo" value={editData.photo || ""} onChange={(url) => setEditData({ ...editData, photo: url })} />
+                    <div><Label className="text-xs">Description</Label><RichTextEditor value={editData.description || ""} onChange={(val) => setEditData({ ...editData, description: val })} placeholder="Enter description..." /></div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><Label className="text-xs">Sort Order</Label><Input type="number" value={editData.sortOrder ?? 0} onChange={(e) => setEditData({ ...editData, sortOrder: e.target.value })} /></div>
+                      <div className="flex items-center gap-2 pt-5"><Label className="text-xs">Visible</Label><Switch checked={editData.isVisible ?? true} onCheckedChange={(v) => setEditData({ ...editData, isVisible: v })} /></div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit" size="sm" disabled={updateMutation.isPending}>{updateMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}Save</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setEditingId(null)}>Cancel</Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex gap-3 min-w-0">
+                      {m.photo && <img src={m.photo} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{m.name}</p>
+                        <p className="text-xs text-muted-foreground">{m.post}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={m.isVisible ? "default" : "outline"}>{m.isVisible ? "Visible" : "Hidden"}</Badge>
+                      <Button size="icon" variant="ghost" onClick={() => startEdit(m)} data-testid={`button-edit-team-${m.id}`}><Pencil className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this team member?")) deleteMutation.mutate(m.id); }} data-testid={`button-delete-team-${m.id}`}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Badge variant={m.isVisible ? "default" : "outline"}>
-                    {m.isVisible ? "Visible" : "Hidden"}
-                  </Badge>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => { if (confirm("Delete this team member?")) deleteMutation.mutate(m.id); }}
-                    data-testid={`button-delete-team-${m.id}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+                )}
               </CardContent>
             </Card>
           ))}
