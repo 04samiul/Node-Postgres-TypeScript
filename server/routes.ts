@@ -253,7 +253,8 @@ export async function registerRoutes(
 
   app.post("/api/login", async (req, res) => {
     try {
-      const { identifier, password, loginType } = req.body;
+      const { identifier: rawIdentifier, password, loginType } = req.body;
+      const identifier = (rawIdentifier || "").trim();
 
       let user;
       if (loginType === "whatsapp") {
@@ -263,7 +264,8 @@ export async function registerRoutes(
       }
 
       if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        const label = loginType === "whatsapp" ? "WhatsApp number" : "Username";
+        return res.status(401).json({ message: `${label} not found` });
       }
 
       if (user.isRestricted) {
@@ -274,7 +276,7 @@ export async function registerRoutes(
 
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: "Incorrect password" });
       }
 
       req.session.userId = user.id;

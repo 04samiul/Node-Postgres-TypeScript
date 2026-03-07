@@ -63,7 +63,7 @@ function LoginForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    loginMutation.mutate({ identifier, password, loginType });
+    loginMutation.mutate({ identifier: identifier.trim(), password, loginType });
   }
 
   return (
