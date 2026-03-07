@@ -382,7 +382,7 @@ function UsersTab() {
   );
 }
 
-function useDeleteMutation(endpoint: string, queryKey: string) {
+function useDeleteMutation(endpoint: string, queryKey: string, extraQueryKeys: string[] = []) {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (id: number) => {
@@ -390,6 +390,7 @@ function useDeleteMutation(endpoint: string, queryKey: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
+      extraQueryKeys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }));
       toast({ title: "Deleted successfully" });
     },
     onError: (error: Error) => {
@@ -591,7 +592,7 @@ function CoursesTab() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [viewingCourseId, setViewingCourseId] = useState<number | null>(null);
   const [enrollFilter, setEnrollFilter] = useState<string>("pending");
-  const deleteMutation = useDeleteMutation("/api/admin/courses", "/api/admin/courses");
+  const deleteMutation = useDeleteMutation("/api/admin/courses", "/api/admin/courses", ["/api/courses"]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -599,6 +600,7 @@ function CoursesTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
       toast({ title: "Course created" });
       setFormData({});
       setIsCreating(false);
@@ -1165,7 +1167,7 @@ function MockTestsTab() {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [editingTest, setEditingTest] = useState<MockTest | null>(null);
-  const deleteMutation = useDeleteMutation("/api/admin/mock-tests", "/api/admin/mock-tests");
+  const deleteMutation = useDeleteMutation("/api/admin/mock-tests", "/api/admin/mock-tests", ["/api/mock-tests"]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1173,6 +1175,7 @@ function MockTestsTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/mock-tests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mock-tests"] });
       toast({ title: "Mock test created" });
       setIsCreating(false);
     },
@@ -1187,6 +1190,7 @@ function MockTestsTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/mock-tests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mock-tests"] });
       toast({ title: "Mock test updated" });
       setEditingTest(null);
     },
@@ -1444,7 +1448,7 @@ function ClassesTab() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [editData, setEditData] = useState<Record<string, any>>({});
-  const deleteMutation = useDeleteMutation("/api/admin/classes", "/api/admin/classes");
+  const deleteMutation = useDeleteMutation("/api/admin/classes", "/api/admin/classes", ["/api/classes"]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1452,6 +1456,7 @@ function ClassesTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/classes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/classes"] });
       toast({ title: "Class created" });
       setFormData({});
       setIsCreating(false);
@@ -1467,6 +1472,7 @@ function ClassesTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/classes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/classes"] });
       toast({ title: "Class updated" });
       setEditingId(null);
     },
@@ -1681,7 +1687,7 @@ function ResourcesTab() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Record<string, any>>({});
-  const deleteMutation = useDeleteMutation("/api/admin/resources", "/api/admin/resources");
+  const deleteMutation = useDeleteMutation("/api/admin/resources", "/api/admin/resources", ["/api/resources"]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1689,6 +1695,7 @@ function ResourcesTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/resources"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
       toast({ title: "Resource created" });
       setFormData({});
       setIsCreating(false);
@@ -1704,6 +1711,7 @@ function ResourcesTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/resources"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/resources"] });
       toast({ title: "Resource updated" });
       setEditingId(null);
     },
@@ -1868,7 +1876,7 @@ function NoticesTab() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Record<string, any>>({});
-  const deleteMutation = useDeleteMutation("/api/admin/notices", "/api/admin/notices");
+  const deleteMutation = useDeleteMutation("/api/admin/notices", "/api/admin/notices", ["/api/notices"]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1876,6 +1884,7 @@ function NoticesTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/notices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notices"] });
       toast({ title: "Notice created" });
       setFormData({});
       setIsCreating(false);
@@ -1891,6 +1900,7 @@ function NoticesTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/notices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notices"] });
       toast({ title: "Notice updated" });
       setEditingId(null);
     },
@@ -2045,7 +2055,7 @@ function BannersTab() {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const deleteMutation = useDeleteMutation("/api/admin/banners", "/api/admin/banners");
+  const deleteMutation = useDeleteMutation("/api/admin/banners", "/api/admin/banners", ["/api/hero-banners"]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -2053,6 +2063,7 @@ function BannersTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/banners"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/hero-banners"] });
       toast({ title: "Banner created" });
       setFormData({});
       setIsCreating(false);
