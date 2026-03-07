@@ -281,34 +281,6 @@ function ChangePasswordCard() {
     changeMutation.mutate({ currentPassword: form.currentPassword, newPassword: form.newPassword });
   }
 
-  function PasswordInput({ id, label, field, showKey }: { id: string; label: string; field: keyof typeof form; showKey: keyof typeof show }) {
-    return (
-      <div>
-        <Label className="text-xs">{label}</Label>
-        <div className="relative">
-          <Input
-            id={id}
-            type={show[showKey] ? "text" : "password"}
-            value={form[field]}
-            onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-            placeholder="••••••••"
-            data-testid={`input-${id}`}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-0 top-0 h-full px-3"
-            onClick={() => setShow({ ...show, [showKey]: !show[showKey] })}
-            data-testid={`button-toggle-${id}`}
-          >
-            {show[showKey] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Card data-testid="card-change-password">
       <CardHeader className="pb-2">
@@ -318,9 +290,51 @@ function ChangePasswordCard() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <PasswordInput id="current-password" label="Current Password" field="currentPassword" showKey="current" />
-          <PasswordInput id="new-password" label="New Password" field="newPassword" showKey="newP" />
-          <PasswordInput id="confirm-password" label="Confirm New Password" field="confirmPassword" showKey="confirm" />
+          <div>
+            <Label className="text-xs">Current Password</Label>
+            <div className="relative">
+              <Input
+                type={show.current ? "text" : "password"}
+                value={form.currentPassword}
+                onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
+                placeholder="••••••••"
+                data-testid="input-current-password"
+              />
+              <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3" onClick={() => setShow({ ...show, current: !show.current })} data-testid="button-toggle-current-password">
+                {show.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">New Password</Label>
+            <div className="relative">
+              <Input
+                type={show.newP ? "text" : "password"}
+                value={form.newPassword}
+                onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
+                placeholder="••••••••"
+                data-testid="input-new-password"
+              />
+              <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3" onClick={() => setShow({ ...show, newP: !show.newP })} data-testid="button-toggle-new-password">
+                {show.newP ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Confirm New Password</Label>
+            <div className="relative">
+              <Input
+                type={show.confirm ? "text" : "password"}
+                value={form.confirmPassword}
+                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                placeholder="••••••••"
+                data-testid="input-confirm-password"
+              />
+              <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3" onClick={() => setShow({ ...show, confirm: !show.confirm })} data-testid="button-toggle-confirm-password">
+                {show.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
         </div>
         <div className="mt-4">
           <Button onClick={handleSubmit} disabled={changeMutation.isPending} data-testid="button-change-password">
