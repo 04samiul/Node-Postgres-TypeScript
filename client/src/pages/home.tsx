@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionHeader } from "@/components/section-header";
 import { RichTextDisplay } from "@/components/rich-text-editor";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { format } from "date-fns";
 import {
@@ -25,9 +25,12 @@ import {
   Loader2,
   X,
   Crown,
+  RotateCcw,
+  Lock,
+  Eye,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import type { Course, MockTest, Class, Resource, Notice, HeroBanner, Enrollment, PaginatedResponse } from "@shared/schema";
+import type { Course, MockTest, Class, Resource, Notice, HeroBanner, Enrollment, PaginatedResponse, MockSubmission } from "@shared/schema";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSEO } from "@/hooks/use-seo";
 import { useAuth } from "@/hooks/use-auth";
@@ -431,15 +434,180 @@ function CoursesSection() {
   );
 }
 
+const ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+
+function HomeMockTestAction({
+  test,
+  isUpcoming,
+  enrolledCourseIds,
+  draft,
+  submissionsForTest,
+  onPreview,
+}: {
+  test: MockTest;
+  isUpcoming: boolean;
+  enrolledCourseIds: Set<number>;
+  draft?: any;
+  submissionsForTest: MockSubmission[];
+  onPreview: () => void;
+}) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (draftId: number) => {
+      await apiRequest("DELETE", `/api/mock-submissions/${draftId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-in-progress"] });
+      navigate(`/mock-tests/${test.id}`);
+    },
+    onError: () => toast({ title: "Failed to reset draft", variant: "destructive" }),
+  });
+
+  const hasSubmitted = submissionsForTest.length > 0;
+  const hasDraft = !!draft;
+
+  const previewBtn = hasSubmitted ? (
+    <Button size="sm" variant="outline" onClick={onPreview} data-testid={`button-preview-${test.id}`}>
+      <Eye className="h-3.5 w-3.5 mr-1" /> Results
+    </Button>
+  ) : null;
+
+  if (isUpcoming) {
+    return (
+      <>
+        <Button variant="outline" size="sm" disabled data-testid={`button-mocktest-upcoming-${test.id}`}>
+          <Clock className="h-3.5 w-3.5 mr-1" /> Upcoming
+        </Button>
+        {previewBtn}
+      </>
+    );
+  }
+
+  if (test.courseId) {
+    if (!user) {
+      return <Link href="/auth"><Button size="sm" variant="outline"><Lock className="h-3.5 w-3.5 mr-1" />Login to Access</Button></Link>;
+    }
+    if (!enrolledCourseIds.has(test.courseId)) {
+      return (
+        <>
+          <Link href={`/courses/${test.courseId}`}>
+            <Button size="sm" variant="outline" data-testid={`button-enroll-access-${test.id}`}>
+              <Lock className="h-3.5 w-3.5 mr-1" /> Enroll to Access
+            </Button>
+          </Link>
+          {previewBtn}
+        </>
+      );
+    }
+  }
+
+  if ((test.access === "signin" || test.access === "paid") && !user) {
+    return <Link href="/auth"><Button size="sm" data-testid={`button-mocktest-login-${test.id}`}>Login to Start</Button></Link>;
+  }
+
+  if (test.access === "paid" && !user?.isPremium && !test.courseId) {
+    return (
+      <>
+        <Button size="sm" variant="outline" disabled data-testid={`button-premium-${test.id}`}>Premium Only</Button>
+        {previewBtn}
+      </>
+    );
+  }
+
+  if (!hasSubmitted && !hasDraft) {
+    return (
+      <Link href={`/mock-tests/${test.id}`}>
+        <Button size="sm" data-testid={`button-start-${test.id}`}>
+          <Play className="h-3.5 w-3.5 mr-1" /> Start Exam
+        </Button>
+      </Link>
+    );
+  }
+
+  if (hasSubmitted && !hasDraft) {
+    return (
+      <>
+        <Link href={`/mock-tests/${test.id}`}>
+          <Button size="sm" variant="outline" data-testid={`button-reexam-${test.id}`}>
+            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Re-exam
+          </Button>
+        </Link>
+        {previewBtn}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Link href={`/mock-tests/${test.id}`}>
+        <Button size="sm" data-testid={`button-resume-${test.id}`}>
+          <Play className="h-3.5 w-3.5 mr-1" /> Resume
+        </Button>
+      </Link>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => deleteDraftMutation.mutate(draft.id)}
+        disabled={deleteDraftMutation.isPending}
+        data-testid={`button-reexam-${test.id}`}
+        title="Discard draft and start fresh"
+      >
+        {deleteDraftMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5 mr-1" />}
+        Re-exam
+      </Button>
+      {previewBtn}
+    </>
+  );
+}
+
 function MockTestsSection() {
   const { user } = useAuth();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "100px" });
+  const [previewMockId, setPreviewMockId] = useState<number | null>(null);
 
   const { data: mockTests, isLoading } = useQuery<MockTest[]>({
     queryKey: ["/api/mock-tests", "?limit=3"],
     enabled: isInView,
   });
+
+  const { data: enrollments } = useQuery<Enrollment[]>({
+    queryKey: ["/api/my-enrollments"],
+    enabled: !!user && isInView,
+  });
+
+  const { data: inProgressMocks } = useQuery<any[]>({
+    queryKey: ["/api/my-in-progress"],
+    enabled: !!user && isInView,
+  });
+
+  const { data: mySubmissions } = useQuery<MockSubmission[]>({
+    queryKey: ["/api/my-submissions"],
+    enabled: !!user && isInView,
+  });
+
+  const enrolledCourseIds = new Set(enrollments?.filter(e => e.status === "approved").map(e => e.courseId) ?? []);
+
+  const draftByMockId = new Map<number, any>(
+    (inProgressMocks ?? []).map((d) => [d.mockTestId, d])
+  );
+
+  const submissionsByMockId = (mySubmissions ?? [])
+    .filter((s) => s.isSubmitted)
+    .reduce<Record<number, MockSubmission[]>>((acc, s) => {
+      if (!acc[s.mockTestId]) acc[s.mockTestId] = [];
+      acc[s.mockTestId].push(s);
+      return acc;
+    }, {});
+
+  const previewSubmissions = previewMockId !== null
+    ? [...(submissionsByMockId[previewMockId] ?? [])].sort(
+        (a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime()
+      )
+    : [];
 
   return (
     <motion.section
@@ -469,14 +637,16 @@ function MockTestsSection() {
           {mockTests.map((test) => {
             const publishDate = new Date(test.publishTime);
             const isUpcoming = publishDate.getTime() > Date.now();
+            const draft = draftByMockId.get(test.id);
+            const subs = submissionsByMockId[test.id] ?? [];
             return (
-              <Card 
-                key={test.id} 
+              <Card
+                key={test.id}
                 className={`flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-                  test.access === "paid" 
-                    ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm" 
+                  test.access === "paid"
+                    ? "border-amber-200 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/10 dark:to-background shadow-sm"
                     : ""
-                }`} 
+                }`}
                 data-testid={`card-mocktest-${test.id}`}
               >
                 <CardHeader>
@@ -501,31 +671,37 @@ function MockTestsSection() {
                     <span data-testid={`text-mocktest-date-${test.id}`}>{format(publishDate, "MMM dd, yyyy")}</span>
                   </div>
                   {isUpcoming && <CountdownTimer targetDate={publishDate} />}
-                </CardContent>
-                <CardFooter>
-                  {isUpcoming ? (
-                    <Button variant="outline" size="sm" disabled data-testid={`button-mocktest-upcoming-${test.id}`}>
-                      <Clock className="h-3.5 w-3.5 mr-1" />
-                      Upcoming
-                    </Button>
-                  ) : (test.access === "signin" || test.access === "paid") && !user ? (
-                    <Link href="/auth">
-                      <Button size="sm" data-testid={`button-mocktest-login-${test.id}`}>
-                        Login to Start
-                      </Button>
-                    </Link>
-                  ) : test.access === "paid" && !user?.isPremium ? (
-                    <Button size="sm" variant="outline" disabled data-testid={`button-premium-${test.id}`}>
-                      Premium Only
-                    </Button>
-                  ) : (
-                    <Link href={`/mock-tests/${test.id}`}>
-                      <Button size="sm" data-testid={`button-mocktest-start-${test.id}`}>
-                        <Play className="h-3.5 w-3.5 mr-1" />
-                        Start Exam
-                      </Button>
-                    </Link>
+                  {draft && !isUpcoming && (
+                    <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                      <Clock className="h-3 w-3" />
+                      <span>{Object.keys((draft.answers as object) || {}).length} answered · Unsubmitted</span>
+                    </div>
                   )}
+                  {subs.length > 0 && !isUpcoming && (() => {
+                    const latest = [...subs].sort((a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime())[0];
+                    return (
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <FileText className="h-3 w-3" />
+                        <span>{subs.length} attempt{subs.length > 1 ? "s" : ""} · Latest: {latest?.netMarks?.toFixed(1)}</span>
+                        <Badge
+                          variant={latest?.passed ? "default" : "destructive"}
+                          className={`text-[10px] px-1.5 py-0 ${latest?.passed ? "bg-green-600" : ""}`}
+                        >
+                          {latest?.passed ? "Pass" : "Fail"}
+                        </Badge>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+                <CardFooter className="flex flex-wrap gap-2">
+                  <HomeMockTestAction
+                    test={test}
+                    isUpcoming={isUpcoming}
+                    enrolledCourseIds={enrolledCourseIds}
+                    draft={draft}
+                    submissionsForTest={subs}
+                    onPreview={() => setPreviewMockId(test.id)}
+                  />
                 </CardFooter>
               </Card>
             );
@@ -534,6 +710,39 @@ function MockTestsSection() {
       ) : (
         <p className="text-muted-foreground text-sm" data-testid="text-mocktests-empty">No mock tests available yet.</p>
       )}
+
+      <Dialog open={previewMockId !== null} onOpenChange={(open) => { if (!open) setPreviewMockId(null); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-home-preview-attempts">
+          <DialogHeader>
+            <DialogTitle className="text-base">Results</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-1">
+            {previewSubmissions.map((sub, idx) => {
+              const attemptLabel = ORDINALS[previewSubmissions.length - 1 - idx] ?? `${previewSubmissions.length - idx}th`;
+              return (
+                <div key={sub.id} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50" data-testid={`home-attempt-row-${sub.id}`}>
+                  <div>
+                    <p className="text-sm font-medium">{attemptLabel} Attempt</p>
+                    <p className="text-xs text-muted-foreground">
+                      {sub.submittedAt ? format(new Date(sub.submittedAt), "MMM dd, yyyy HH:mm") : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={sub.passed ? "default" : "destructive"} className={sub.passed ? "bg-green-600" : ""}>
+                      {sub.netMarks?.toFixed(1)}
+                    </Badge>
+                    <Link href={`/mock-review/${sub.id}`} onClick={() => setPreviewMockId(null)}>
+                      <Button size="sm" variant="outline" data-testid={`button-home-review-${sub.id}`}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.section>
   );
 }
