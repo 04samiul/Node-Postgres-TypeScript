@@ -25,7 +25,7 @@ if (!databaseUrl) {
 //  connectionTimeoutMillis: 5000 // Increased timeout
 //});
 
-// sslmode=require এবং pgbouncer=true যোগ করা হয়েছে by GEMENI
+// sslmode=require এবং pgbouncer=true যোগ করা হয়েছে by GEMENI (28 to 38)
 const connectionString = databaseUrl.includes('?') 
   ? `${databaseUrl}&sslmode=require&pgbouncer=true` 
   : `${databaseUrl}?sslmode=require&pgbouncer=true`;
