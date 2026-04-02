@@ -12,8 +12,8 @@ if (!databaseUrl) {
   );
 }
 
-Use connection string directly with ssl disabled for initial pool if needed, 
-but preferred way for Supabase is letting the driver handle it via connectionString.
+//Use connection string directly with ssl disabled for initial pool if needed, 
+//but preferred way for Supabase is letting the driver handle it via connectionString.
 const connectionString = databaseUrl.includes('?') 
  ? `${databaseUrl}&sslmode=no-verify` 
   : `${databaseUrl}?sslmode=no-verify`;
