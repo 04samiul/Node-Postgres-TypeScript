@@ -1,0 +1,9 @@
+
+User-agent: *
+Allow: /
+Allow: /mock-tests
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /mock-review/
+
+Sitemap: /sitemap.xml
