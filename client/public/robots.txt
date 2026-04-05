@@ -5,4 +5,14 @@ Disallow: /admin
 Disallow: /dashboard
 Disallow: /mock-review/
 
+Sitemap: https://crackcu.eu.cc/sitemap.xml
+
+
+User-agent: *
+Allow: /
+Allow: /mock-tests
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /mock-review/
+
 Sitemap: /sitemap.xml
