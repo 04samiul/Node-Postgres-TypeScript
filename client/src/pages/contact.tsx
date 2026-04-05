@@ -20,7 +20,7 @@ const SOCIAL_LINKS = [
   { icon: SiFacebook, href: "https://www.facebook.com/crackcu", label: "Facebook Page" },
   { icon: Users, href: "https://www.facebook.com/groups/crackcu", label: "Facebook Group" },
   { icon: SiYoutube, href: "https://www.youtube.com/@crackcu", label: "YouTube" },
-  { icon: SiTelegram, href: "https://t.me/crackcu", label: "Telegram" },
+  { icon: SiTelegram, href: "https://t.me/crackcubd", label: "Telegram" },
   { icon: SiWhatsapp, href: "https://api.whatsapp.com/send/?phone=8801522132809", label: "WhatsApp" },
 ];
 
