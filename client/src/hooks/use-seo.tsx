@@ -73,4 +73,22 @@ export function useSEO({ title, description, path, ogType = "website", noIndex =
       document.title = `${SITE_NAME} - Don't Just Study, Crack It!`;
     };
   }, [title, description, path, ogType, noIndex]);
+
+  // Add schema
+    if (schema) {
+      let el = document.querySelector('script[data-seo="true"]') as HTMLScriptElement | null;
+      if (!el) {
+        el = document.createElement("script");
+        el.type = "application/ld+json";
+        el.setAttribute("data-seo", "true");
+        document.head.appendChild(el);
+      }
+      el.textContent = JSON.stringify(schema);
+    }
+
+    return () => {
+      document.title = `${SITE_NAME} - Don't Just Study, Crack It!`;
+      document.querySelector('script[data-seo="true"]')?.remove();
+    };
+  }, [title, description, path, ogType, noIndex, schema]);
 }
