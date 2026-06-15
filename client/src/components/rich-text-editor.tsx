@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { Bold, Underline, Italic, List, ListOrdered } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -23,18 +23,34 @@ interface RichTextEditorProps {
 
 export function RichTextEditor({ value, onChange, placeholder, className, minHeight = "100px" }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const lastValueRef = useRef<string>("");
+
+  // Sync DOM only when value changes from OUTSIDE (e.g. loading existing
+  // course data into the edit form). Skip sync for changes that came from
+  // our own onChange, so the cursor never gets reset mid-typing.
+  useEffect(() => {
+    const incoming = sanitize(value || "");
+    if (incoming !== lastValueRef.current && editorRef.current) {
+      editorRef.current.innerHTML = incoming;
+      lastValueRef.current = incoming;
+    }
+  }, [value]);
 
   const execCommand = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
     if (editorRef.current) {
-      onChange(sanitize(editorRef.current.innerHTML));
+      const html = sanitize(editorRef.current.innerHTML);
+      lastValueRef.current = html;
+      onChange(html);
     }
     editorRef.current?.focus();
   }, [onChange]);
 
   const handleInput = useCallback(() => {
     if (editorRef.current) {
-      onChange(sanitize(editorRef.current.innerHTML));
+      const html = sanitize(editorRef.current.innerHTML);
+      lastValueRef.current = html;
+      onChange(html);
     }
   }, [onChange]);
 
@@ -73,11 +89,11 @@ export function RichTextEditor({ value, onChange, placeholder, className, minHei
       <div
         ref={editorRef}
         contentEditable
+        dir="ltr"
         className="px-3 py-2 text-sm outline-none overflow-auto prose prose-sm max-w-none dark:prose-invert [&>*]:my-0"
-        style={{ minHeight }}
+        style={{ minHeight, direction: "ltr" }}
         onInput={handleInput}
         onPaste={handlePaste}
-        dangerouslySetInnerHTML={{ __html: sanitize(value || "") }}
         data-placeholder={placeholder}
         data-testid="input-rich-text"
       />
