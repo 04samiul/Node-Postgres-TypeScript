@@ -1062,7 +1062,7 @@ function NoticesSection() {
 }
 
 export default function Home() {
-  useSEO({ title: "Crack-CU", description: "Prepare for Chittagong University admission with expert-led courses, mock tests, video classes, and study resources. Join thousands of CU aspirants.", path: "/" });
+  useSEO({ title: "Crack-CU | CU C unit admission Coaching", description: "Prepare for Chittagong University admission with expert-led courses, mock tests, video classes, and study resources. Join thousands of CU aspirants.", path: "/" });
 
   return (
     <div className="min-h-screen" data-testid="page-home">
