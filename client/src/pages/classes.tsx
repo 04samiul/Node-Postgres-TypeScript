@@ -16,7 +16,7 @@ import { useSEO } from "@/hooks/use-seo";
 const FILTER_TAGS = ["All", "Free", "English", "Analytical Skill", "Problem Solving"];
 
 export default function ClassesPage() {
-  useSEO({ title: "Video Classes", description: "Watch expert video classes for CU admission preparation. Covering English, Analytical Skills, and Problem Solving subjects.", path: "/classes" });
+  useSEO({ title: "Classes", description: "Watch expert video classes for CU admission preparation. Covering English, Analytical Skills, and Problem Solving subjects.", path: "/classes" });
 
   const [offset, setOffset] = useState(0);
   const [limit] = useState(6);
