@@ -164,6 +164,7 @@ function UsersTab() {
   const [resetPasswordUserId, setResetPasswordUserId] = useState<number | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [viewCoursesUserId, setViewCoursesUserId] = useState<number | null>(null);
 
   const updateRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
@@ -260,6 +261,14 @@ function UsersTab() {
                   <Label className="text-xs">Restricted</Label>
                   <Switch checked={u.isRestricted} onCheckedChange={(v) => toggleRestriction.mutate({ userId: u.id, isRestricted: v })} data-testid={`switch-restrict-${u.id}`} />
                 </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setViewCoursesUserId(u.id)}
+                  data-testid={`button-view-courses-${u.id}`}
+                >
+                  <BookOpen className="h-3.5 w-3.5 mr-1" /> Courses
+                </Button>
                 <Button
                   size="icon"
                   variant="ghost"
@@ -381,7 +390,70 @@ function UsersTab() {
         </Card>
       ))}
       {(!filtered || filtered.length === 0) && <p className="text-sm text-muted-foreground">No users found.</p>}
+
+      <UserEnrollmentsDialog
+        userId={viewCoursesUserId}
+        onClose={() => setViewCoursesUserId(null)}
+      />
     </div>
+  );
+}
+
+interface UserEnrollmentRow {
+  id: number;
+  courseId: number;
+  status: string;
+  createdAt: string;
+  courseTitle: string;
+  courseBanner: string | null;
+}
+
+function UserEnrollmentsDialog({ userId, onClose }: { userId: number | null; onClose: () => void }) {
+  const { data, isLoading } = useQuery<UserEnrollmentRow[]>({
+    queryKey: [`/api/admin/users/${userId}/enrollments`],
+    enabled: userId !== null,
+  });
+
+  return (
+    <Dialog open={userId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg" data-testid="dialog-user-enrollments">
+        <DialogHeader>
+          <DialogTitle>Enrolled Courses</DialogTitle>
+        </DialogHeader>
+
+        {isLoading && <Skeleton className="h-32 w-full" />}
+
+        {data && data.length === 0 && (
+          <p className="text-sm text-muted-foreground py-4">No enrollments found.</p>
+        )}
+
+        {data && data.length > 0 && (
+          <div className="space-y-2">
+            {data.map((e) => (
+              <div
+                key={e.id}
+                className="flex items-center justify-between gap-2 p-3 border rounded-md"
+                data-testid={`enrollment-row-${e.id}`}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{e.courseTitle}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Enrolled {new Date(e.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                {e.status === "approved" ? (
+                  <Badge variant="default" className="bg-green-600 text-xs">Approved</Badge>
+                ) : e.status === "pending" ? (
+                  <Badge variant="outline" className="text-xs">Pending</Badge>
+                ) : (
+                  <Badge variant="destructive" className="text-xs">{e.status}</Badge>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
