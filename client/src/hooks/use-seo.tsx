@@ -64,7 +64,7 @@ export function useSEO({ title, description, path, ogType = "website", noIndex =
     }
 
     if (noIndex) {
-      setMeta("robots", "index, follow");
+      setMeta("robots", "noindex, nofollow");
     } else {
       setMeta("robots", "index, follow");
     }
