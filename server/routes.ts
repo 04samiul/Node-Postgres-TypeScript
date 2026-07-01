@@ -1411,6 +1411,45 @@ export async function registerRoutes(
     },
   );
 
+  // Admin: view one student's full submission, question by question
+  app.get(
+    "/api/admin/submissions/:submissionId/review",
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const submissionId = parseInt(req.params.submissionId);
+        const submission = await storage.getSubmission(submissionId);
+        if (!submission)
+          return res.status(404).json({ message: "Submission not found" });
+
+        const test = await storage.getMockTest(submission.mockTestId);
+        if (!test)
+          return res.status(404).json({ message: "Mock test not found" });
+
+        const student = await storage.getUser(submission.userId);
+
+        res.json({
+          submission,
+          student: student
+            ? {
+                id: student.id,
+                username: student.username,
+                fullName: student.fullName,
+                whatsapp: student.whatsapp,
+              }
+            : null,
+          mockTest: {
+            id: test.id,
+            title: test.title,
+            questions: test.questions,
+          },
+        });
+      } catch (error: any) {
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
   // ======= CLASSES CRUD =======
   app.get("/api/admin/classes", requireAdmin, async (_req, res) => {
     res.json(await storage.getAllClasses());

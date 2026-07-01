@@ -14,10 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { renderMath } from "@/lib/render-math";
 import {
   Users,
   BookOpen,
@@ -39,6 +41,7 @@ import {
   Search,
   ClipboardList,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   Download,
   KeyRound,
@@ -46,7 +49,7 @@ import {
   Clock,
   CheckCheck,
 } from "lucide-react";
-import type { User, Course, MockTest, Class, Resource, Notice, TeamMember, HeroBanner } from "@shared/schema";
+import type { User, Course, MockTest, Class, Resource, Notice, TeamMember, HeroBanner, MockSubmission } from "@shared/schema";
 import { MOCK_TAGS, CLASS_TAGS, RESOURCE_TAGS, ACCESS_LEVELS, USER_ROLES, NOTICE_TAGS } from "@shared/schema";
 import { Redirect } from "wouter";
 import { ImageUploader } from "@/components/image-uploader";
@@ -1331,6 +1334,7 @@ function MockSubmissionsList({ mockTestId, mockTitle }: { mockTestId: number; mo
 
   const [search, setSearch] = useState("");
   const [passFilter, setPassFilter] = useState<string>("all");
+  const [reviewSubmissionId, setReviewSubmissionId] = useState<number | null>(null);
 
   if (isLoading) return <Skeleton className="h-24 w-full" />;
 
@@ -1403,7 +1407,8 @@ function MockSubmissionsList({ mockTestId, mockTitle }: { mockTestId: number; mo
                 <th className="py-2 pr-2 font-medium text-center">PS</th>
                 <th className="py-2 pr-2 font-medium text-center">Total</th>
                 <th className="py-2 pr-2 font-medium text-center">Net</th>
-                <th className="py-2 font-medium text-center">Status</th>
+                <th className="py-2 pr-2 font-medium text-center">Status</th>
+                <th className="py-2 font-medium text-center">Answers</th>
               </tr>
             </thead>
             <tbody>
@@ -1419,12 +1424,23 @@ function MockSubmissionsList({ mockTestId, mockTitle }: { mockTestId: number; mo
                   <td className="py-2 pr-2 text-center">{s.psMarks?.toFixed(1) ?? "-"}</td>
                   <td className="py-2 pr-2 text-center font-medium">{s.totalMarks?.toFixed(1) ?? "-"}</td>
                   <td className="py-2 pr-2 text-center font-medium">{s.netMarks?.toFixed(1) ?? "-"}</td>
-                  <td className="py-2 text-center">
+                  <td className="py-2 pr-2 text-center">
                     {s.passed ? (
                       <Badge variant="default" className="bg-green-600 text-xs">Pass</Badge>
                     ) : (
                       <Badge variant="destructive" className="text-xs">Fail</Badge>
                     )}
+                  </td>
+                  <td className="py-2 text-center">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-xs px-2"
+                      onClick={() => setReviewSubmissionId(s.id)}
+                      data-testid={`button-view-submission-${s.id}`}
+                    >
+                      <Eye className="h-3 w-3 mr-1" /> View
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -1436,7 +1452,171 @@ function MockSubmissionsList({ mockTestId, mockTitle }: { mockTestId: number; mo
           {submitted.length === 0 ? "No submissions yet for this mock test." : "No matching submissions found."}
         </p>
       )}
+
+      <SubmissionReviewDialog
+        submissionId={reviewSubmissionId}
+        onClose={() => setReviewSubmissionId(null)}
+      />
     </div>
+  );
+}
+
+interface AdminReviewQuestion {
+  id: number;
+  passage: string | null;
+  section: string;
+  question: string;
+  image: string | null;
+  options: string[];
+  correctAnswer: number;
+}
+
+interface AdminReviewData {
+  submission: MockSubmission;
+  student: { id: number; username: string; fullName: string; whatsapp: string } | null;
+  mockTest: { id: number; title: string; questions: AdminReviewQuestion[] };
+}
+
+const ADMIN_REVIEW_SECTION_COLORS: Record<string, string> = {
+  EngP: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  EngO: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  AS: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+  PS: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+};
+
+function SubmissionReviewDialog({ submissionId, onClose }: { submissionId: number | null; onClose: () => void }) {
+  const { data, isLoading } = useQuery<AdminReviewData>({
+    queryKey: [`/api/admin/submissions/${submissionId}/review`],
+    enabled: submissionId !== null,
+  });
+
+  const questions = data ? (Array.isArray(data.mockTest.questions) ? data.mockTest.questions : []) : [];
+  const studentAnswers = data ? ((data.submission.answers || {}) as Record<string, number>) : {};
+
+  let correct = 0;
+  let wrong = 0;
+  let unanswered = 0;
+  questions.forEach((q) => {
+    const ans = studentAnswers[String(q.id)];
+    if (ans === undefined || ans === null || ans === -1) unanswered++;
+    else if (ans === q.correctAnswer) correct++;
+    else wrong++;
+  });
+
+  return (
+    <Dialog open={submissionId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" data-testid="dialog-submission-review">
+        <DialogHeader>
+          <DialogTitle>
+            {data ? `${data.mockTest.title} — ${data.student?.fullName ?? "Student"}` : "Submission Review"}
+          </DialogTitle>
+        </DialogHeader>
+
+        {isLoading && <Skeleton className="h-64 w-full" />}
+
+        {data && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+              <span>Username: <strong>{data.student?.username ?? "-"}</strong></span>
+              <span>WhatsApp: <strong>{data.student?.whatsapp ?? "-"}</strong></span>
+              <span>Net: <strong className={data.submission.passed ? "text-green-600" : "text-destructive"}>{(data.submission.netMarks ?? 0).toFixed(2)}</strong></span>
+              {data.submission.passed ? (
+                <Badge variant="default" className="bg-green-600 text-xs">Passed</Badge>
+              ) : (
+                <Badge variant="destructive" className="text-xs">Failed</Badge>
+              )}
+              <span>Correct: {correct}</span>
+              <span>Wrong: {wrong}</span>
+              <span>Skipped: {unanswered}</span>
+            </div>
+
+            <div className="space-y-4">
+              {questions.map((q, idx) => {
+                const studentAns = studentAnswers[String(q.id)];
+                const isCorrect = studentAns === q.correctAnswer;
+                const isUnanswered = studentAns === undefined || studentAns === null || studentAns === -1;
+
+                return (
+                  <Card key={q.id} data-testid={`admin-review-question-${q.id}`}>
+                    <CardContent className="pt-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-muted-foreground">Q{idx + 1}.</span>
+                          <Badge className={ADMIN_REVIEW_SECTION_COLORS[q.section] || ""}>{q.section}</Badge>
+                        </div>
+                        {isUnanswered ? (
+                          <Badge variant="outline" className="text-xs">Skipped</Badge>
+                        ) : isCorrect ? (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span className="text-xs font-medium">Correct</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-destructive">
+                            <XCircle className="h-4 w-4" />
+                            <span className="text-xs font-medium">Wrong</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {q.passage && (
+                        <div
+                          className="bg-muted p-3 rounded-md text-sm leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: renderMath(q.passage) }}
+                        />
+                      )}
+
+                      {q.image && (
+                        <img src={q.image} alt={`Question ${q.id} illustration`} className="max-w-full rounded-md max-h-64 object-contain" loading="lazy" />
+                      )}
+
+                      <p className="text-sm font-medium" dangerouslySetInnerHTML={{ __html: renderMath(q.question) }} />
+
+                      <div className="space-y-2">
+                        {q.options.map((opt, oi) => {
+                          const isStudentChoice = studentAns === oi;
+                          const isCorrectOption = q.correctAnswer === oi;
+
+                          let optionClass = "border-border";
+                          if (isCorrectOption) {
+                            optionClass = "bg-green-50 dark:bg-green-950 border-green-400 dark:border-green-600";
+                          } else if (isStudentChoice && !isCorrect) {
+                            optionClass = "bg-red-50 dark:bg-red-950 border-red-400 dark:border-red-600";
+                          }
+
+                          return (
+                            <div
+                              key={oi}
+                              className={`w-full text-left p-3 rounded-md border flex items-center gap-3 ${optionClass}`}
+                              data-testid={`admin-review-option-${q.id}-${oi}`}
+                            >
+                              <span className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${
+                                isCorrectOption
+                                  ? "bg-green-500 text-white border-green-500"
+                                  : isStudentChoice && !isCorrect
+                                  ? "bg-red-500 text-white border-red-500"
+                                  : "border-border"
+                              }`}>
+                                {String.fromCharCode(65 + oi)}
+                              </span>
+                              <span className="text-sm flex-1" dangerouslySetInnerHTML={{ __html: renderMath(opt) }} />
+                              {isCorrectOption && <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />}
+                              {isStudentChoice && !isCorrect && <XCircle className="h-4 w-4 text-destructive shrink-0" />}
+                              {isStudentChoice && isCorrect && <span className="text-xs text-green-600 shrink-0">Student's answer</span>}
+                              {isStudentChoice && !isCorrect && <span className="text-xs text-destructive shrink-0">Student's answer</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
