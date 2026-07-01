@@ -141,7 +141,7 @@ export default function ClassesPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1">
-                    {cls.description && <div className="text-sm text-muted-foreground line-clamp-2 mb-2"><RichTextDisplay content={cls.description} /></div>}
+                  
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3" />
                       <span>{format(new Date(cls.createdAt), "MMM dd, yyyy")}</span>
