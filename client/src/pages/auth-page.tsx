@@ -62,7 +62,6 @@ function LoginForm() {
   const { loginMutation } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [loginType, setLoginType] = useState<"username" | "whatsapp">("username");
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotDialog, setShowForgotDialog] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
@@ -75,28 +74,20 @@ function LoginForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    loginMutation.mutate({ identifier: identifier.trim(), password, loginType });
+    loginMutation.mutate({ identifier: identifier.trim(), password, loginType: "whatsapp" });
   }
 
   return (
     <Card>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex gap-2 mb-2">
-            <Button type="button" variant={loginType === "username" ? "default" : "outline"} size="sm" onClick={() => setLoginType("username")} data-testid="button-login-username">
-              Username
-            </Button>
-            <Button type="button" variant={loginType === "whatsapp" ? "default" : "outline"} size="sm" onClick={() => setLoginType("whatsapp")} data-testid="button-login-whatsapp">
-              WhatsApp
-            </Button>
-          </div>
           <div>
-            <Label htmlFor="login-identifier">{loginType === "username" ? "Username" : "WhatsApp Number"}</Label>
+            <Label htmlFor="login-identifier">Phone Number</Label>
             <Input
               id="login-identifier"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder={loginType === "username" ? "e.g., S25123456" : "01XXXXXXXXX"}
+              placeholder="01XXXXXXXXX"
               data-testid="input-login-identifier"
             />
           </div>
@@ -190,8 +181,7 @@ function RegisterForm() {
   const { registerMutation } = useAuth();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
-  const [generatedUsername, setGeneratedUsername] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [registered, setRegistered] = useState(false);
   const [form, setForm] = useState({
     fullName: "",
     whatsapp: "",
@@ -226,35 +216,22 @@ function RegisterForm() {
     }
     const { confirmPassword, ...data } = form;
     registerMutation.mutate(data, {
-      onSuccess: (res) => {
-        setGeneratedUsername(res.username);
-        toast({ title: `Account created! Your username is: ${res.username}` });
+      onSuccess: () => {
+        setRegistered(true);
+        toast({ title: "Account created" });
       },
     });
   }
 
-  function copyUsername() {
-    if (generatedUsername) {
-      navigator.clipboard.writeText(generatedUsername);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }
-
-  if (generatedUsername) {
+  if (registered) {
     return (
       <Card>
         <CardContent className="pt-6 text-center space-y-4">
           <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto" />
-          <h3 className="text-lg font-semibold">Registration Successful!</h3>
-          <p className="text-sm text-muted-foreground">Your auto-generated username is:</p>
-          <div className="flex items-center justify-center gap-2">
-            <code className="text-lg font-mono bg-muted px-3 py-1.5 rounded-md" data-testid="text-generated-username">{generatedUsername}</code>
-            <Button size="icon" variant="outline" onClick={copyUsername} data-testid="button-copy-username">
-              {copied ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">Save this username. You'll use it to sign in.</p>
+          <h3 className="text-lg font-semibold">Registration successful</h3>
+          <p className="text-sm text-muted-foreground">
+            Sign in with your phone number, <span className="font-medium text-foreground">{form.whatsapp}</span>, and the password you set.
+          </p>
         </CardContent>
       </Card>
     );
@@ -263,19 +240,21 @@ function RegisterForm() {
   return (
     <Card>
       <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label>Full Name *</Label>
-            <Input value={form.fullName} onChange={(e) => updateField("fullName", e.target.value)} placeholder="Your full name" required data-testid="input-fullname" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-3">
             <div>
-              <Label>WhatsApp *</Label>
-              <Input value={form.whatsapp} onChange={(e) => updateField("whatsapp", e.target.value)} placeholder="01XXXXXXXXX" required data-testid="input-whatsapp" />
+              <Label>Full Name *</Label>
+              <Input value={form.fullName} onChange={(e) => updateField("fullName", e.target.value)} placeholder="Your full name" required data-testid="input-fullname" />
             </div>
-            <div>
-              <Label>Email *</Label>
-              <Input type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="your@email.com" required data-testid="input-email" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label>Phone Number *</Label>
+                <Input value={form.whatsapp} onChange={(e) => updateField("whatsapp", e.target.value)} placeholder="01XXXXXXXXX" required data-testid="input-whatsapp" />
+              </div>
+              <div>
+                <Label>Email *</Label>
+                <Input type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="your@email.com" required data-testid="input-email" />
+              </div>
             </div>
           </div>
 
@@ -369,38 +348,40 @@ function RegisterForm() {
             </div>
           </fieldset>
 
-          <div>
-            <Label>Password *</Label>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={form.password}
-                onChange={(e) => updateField("password", e.target.value)}
-                placeholder="Min 6 characters"
-                required
-                data-testid="input-password"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
+          <div className="space-y-3">
+            <div>
+              <Label>Password *</Label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => updateField("password", e.target.value)}
+                  placeholder="Min 6 characters"
+                  required
+                  data-testid="input-password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
-          </div>
-          <div>
-            <Label>Confirm Password *</Label>
-            <Input
-              type="password"
-              value={form.confirmPassword}
-              onChange={(e) => updateField("confirmPassword", e.target.value)}
-              placeholder="Re-enter password"
-              required
-              data-testid="input-confirm-password"
-            />
+            <div>
+              <Label>Confirm Password *</Label>
+              <Input
+                type="password"
+                value={form.confirmPassword}
+                onChange={(e) => updateField("confirmPassword", e.target.value)}
+                placeholder="Re-enter password"
+                required
+                data-testid="input-confirm-password"
+              />
+            </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={registerMutation.isPending} data-testid="button-register-submit">
