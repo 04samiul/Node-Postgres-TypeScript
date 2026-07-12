@@ -62,10 +62,25 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    const tables = ['users', 'hero_banners', 'courses', 'mock_tests', 'mock_submissions', 'classes', 'resources', 'notices', 'team_members', 'enrollments', 'site_settings', 'session'];
+    const tables = [
+      "users",
+      "hero_banners",
+      "courses",
+      "mock_tests",
+      "mock_submissions",
+      "classes",
+      "resources",
+      "notices",
+      "team_members",
+      "enrollments",
+      "site_settings",
+      "session",
+    ];
     for (const table of tables) {
       try {
-        await pool.query(`ALTER TABLE IF EXISTS ${table} REPLICA IDENTITY FULL`);
+        await pool.query(
+          `ALTER TABLE IF EXISTS ${table} REPLICA IDENTITY FULL`,
+        );
       } catch (e) {
         // Ignore SSL errors during replica identity set
       }
@@ -109,7 +124,6 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);
