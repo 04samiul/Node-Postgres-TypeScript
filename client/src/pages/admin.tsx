@@ -1735,6 +1735,9 @@ function ClassesTab() {
 
   const startEdit = (cls: Class) => {
     setEditingId(cls.id);
+    const pt = cls.publishTime
+      ? new Date(cls.publishTime).toLocaleString("sv-SE", { timeZone: "Asia/Dhaka" }).replace(" ", "T").slice(0, 16)
+      : "";
     setEditData({
       title: cls.title,
       videoUrl: cls.videoUrl,
@@ -1743,6 +1746,7 @@ function ClassesTab() {
       thumbnail: cls.thumbnail || "",
       access: cls.access,
       isVisible: cls.isVisible,
+      publishTime: pt,
       courseId: cls.courseId ?? "__none__",
     });
   };
@@ -1756,7 +1760,7 @@ function ClassesTab() {
       ) : (
         <Card className="mb-4">
           <CardContent className="pt-4">
-            <form onSubmit={(e) => { e.preventDefault(); const courseIdVal = formData.courseId && formData.courseId !== "__none__" ? Number(formData.courseId) : null; createMutation.mutate({ ...formData, isVisible: formData.isVisible ?? true, access: formData.access || "all", courseId: courseIdVal }); }} className="space-y-3">
+            <form onSubmit={(e) => { e.preventDefault(); const courseIdVal = formData.courseId && formData.courseId !== "__none__" ? Number(formData.courseId) : null; const publishTimeWithTZ = formData.publishTime ? formData.publishTime + "+06:00" : undefined; createMutation.mutate({ ...formData, publishTime: publishTimeWithTZ, isVisible: formData.isVisible ?? true, access: formData.access || "all", courseId: courseIdVal }); }} className="space-y-3">
               <div>
                 <Label className="text-xs">Title</Label>
                 <Input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required data-testid="input-class-title" />
@@ -1778,6 +1782,16 @@ function ClassesTab() {
                     {CLASS_TAGS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label className="text-xs flex items-center gap-1"><Calendar className="h-3 w-3" /> Publish Date & Time (Bangladesh Time)</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.publishTime || ""}
+                  onChange={(e) => setFormData({ ...formData, publishTime: e.target.value })}
+                  data-testid="input-class-publish-time"
+                />
+                <p className="text-xs text-muted-foreground mt-0.5">Leave blank to publish immediately. Set a future time to schedule; it appears with a countdown 24h before release.</p>
               </div>
               <div>
                 <Label className="text-xs">Description</Label>
@@ -1826,7 +1840,7 @@ function ClassesTab() {
             <Card key={cls.id} data-testid={`card-class-${cls.id}`}>
               <CardContent className="pt-4">
                 {editingId === cls.id ? (
-                  <form onSubmit={(e) => { e.preventDefault(); const courseIdVal = editData.courseId && editData.courseId !== "__none__" ? Number(editData.courseId) : null; updateMutation.mutate({ id: cls.id, data: { ...editData, courseId: courseIdVal } }); }} className="space-y-3">
+                  <form onSubmit={(e) => { e.preventDefault(); const courseIdVal = editData.courseId && editData.courseId !== "__none__" ? Number(editData.courseId) : null; const publishTimeWithTZ = editData.publishTime ? editData.publishTime + "+06:00" : undefined; updateMutation.mutate({ id: cls.id, data: { ...editData, publishTime: publishTimeWithTZ, courseId: courseIdVal } }); }} className="space-y-3">
                     <div>
                       <Label className="text-xs">Title</Label>
                       <Input value={editData.title || ""} onChange={(e) => setEditData({ ...editData, title: e.target.value })} required />
@@ -1848,6 +1862,15 @@ function ClassesTab() {
                           {CLASS_TAGS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs flex items-center gap-1"><Calendar className="h-3 w-3" /> Publish Date & Time (Bangladesh Time)</Label>
+                      <Input
+                        type="datetime-local"
+                        value={editData.publishTime || ""}
+                        onChange={(e) => setEditData({ ...editData, publishTime: e.target.value })}
+                        data-testid="input-edit-class-publish-time"
+                      />
                     </div>
                     <div>
                       <Label className="text-xs">Description</Label>

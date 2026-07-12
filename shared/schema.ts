@@ -8,11 +8,27 @@ import {
   boolean,
   timestamp,
   jsonb,
+  json,
   serial,
   real,
+  index,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// ============ SESSION (managed by connect-pg-simple, not by app code) ============
+// This mirrors the table connect-pg-simple creates automatically. It is declared
+// here only so drizzle-kit recognizes it as intentional and stops proposing to
+// drop it on every db:push.
+export const session = pgTable(
+  "session",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: json("sess").notNull(),
+    expire: timestamp("expire", { precision: 6 }).notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
 
 // ============ USERS ============
 export const users = pgTable("users", {
@@ -131,7 +147,9 @@ export const mockSubmissions = pgTable("mock_submissions", {
   submittedAt: timestamp("submitted_at"),
 });
 
-export const insertMockSubmissionSchema = createInsertSchema(mockSubmissions).omit({
+export const insertMockSubmissionSchema = createInsertSchema(
+  mockSubmissions,
+).omit({
   id: true,
   startedAt: true,
 });
@@ -149,6 +167,7 @@ export const classes = pgTable("classes", {
   tag: text("tag").notNull(),
   access: text("access").notNull().default("all"),
   isVisible: boolean("is_visible").notNull().default(true),
+  publishTime: timestamp("publish_time").notNull().defaultNow(),
   courseId: integer("course_id"),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -273,20 +292,38 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const mockTestsRelations = relations(mockTests, ({ one, many }) => ({
   submissions: many(mockSubmissions),
-  course: one(courses, { fields: [mockTests.courseId], references: [courses.id] }),
+  course: one(courses, {
+    fields: [mockTests.courseId],
+    references: [courses.id],
+  }),
 }));
 
-export const mockSubmissionsRelations = relations(mockSubmissions, ({ one }) => ({
-  user: one(users, { fields: [mockSubmissions.userId], references: [users.id] }),
-  mockTest: one(mockTests, { fields: [mockSubmissions.mockTestId], references: [mockTests.id] }),
-}));
+export const mockSubmissionsRelations = relations(
+  mockSubmissions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [mockSubmissions.userId],
+      references: [users.id],
+    }),
+    mockTest: one(mockTests, {
+      fields: [mockSubmissions.mockTestId],
+      references: [mockTests.id],
+    }),
+  }),
+);
 
 export const classesRelations = relations(classes, ({ one }) => ({
-  course: one(courses, { fields: [classes.courseId], references: [courses.id] }),
+  course: one(courses, {
+    fields: [classes.courseId],
+    references: [courses.id],
+  }),
 }));
 
 export const resourcesRelations = relations(resources, ({ one }) => ({
-  course: one(courses, { fields: [resources.courseId], references: [courses.id] }),
+  course: one(courses, {
+    fields: [resources.courseId],
+    references: [courses.id],
+  }),
 }));
 
 export const coursesRelations = relations(courses, ({ many }) => ({
@@ -298,7 +335,10 @@ export const coursesRelations = relations(courses, ({ many }) => ({
 
 export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
   user: one(users, { fields: [enrollments.userId], references: [users.id] }),
-  course: one(courses, { fields: [enrollments.courseId], references: [courses.id] }),
+  course: one(courses, {
+    fields: [enrollments.courseId],
+    references: [courses.id],
+  }),
 }));
 
 // ============ QUESTION TYPE ============
@@ -327,12 +367,34 @@ export const BANGLADESH_BOARDS = [
   "Technical",
 ] as const;
 
-export const HSC_GROUPS = ["Business Studies", "Science", "Humanities"] as const;
+export const HSC_GROUPS = [
+  "Business Studies",
+  "Science",
+  "Humanities",
+] as const;
 
-export const MOCK_TAGS = ["CU Mock", "English", "Analytical Skill", "Problem Solving"] as const;
-export const CLASS_TAGS = ["English", "Analytical Skill", "Problem Solving"] as const;
-export const RESOURCE_TAGS = ["CU QB", "English", "Analytical Skill", "Problem Solving"] as const;
-export const NOTICE_TAGS = ["Admission", "CU Notice", "Crack-CU Notice"] as const;
+export const MOCK_TAGS = [
+  "CU Mock",
+  "English",
+  "Analytical Skill",
+  "Problem Solving",
+] as const;
+export const CLASS_TAGS = [
+  "English",
+  "Analytical Skill",
+  "Problem Solving",
+] as const;
+export const RESOURCE_TAGS = [
+  "CU QB",
+  "English",
+  "Analytical Skill",
+  "Problem Solving",
+] as const;
+export const NOTICE_TAGS = [
+  "Admission",
+  "CU Notice",
+  "Crack-CU Notice",
+] as const;
 
 export const ACCESS_LEVELS = ["all", "signin", "paid"] as const;
 export const USER_ROLES = ["student", "mentor", "moderator", "admin"] as const;

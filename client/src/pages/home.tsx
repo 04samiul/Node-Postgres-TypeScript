@@ -111,29 +111,41 @@ function HeroSection() {
   if (!hasBanners) {
     return (
       <div
-        className="relative w-full aspect-video flex items-center justify-center"
-        style={{ background: "linear-gradient(135deg, #eb202a 0%, #1a1a2e 100%)" }}
+        className="relative w-full aspect-video flex items-center justify-center overflow-hidden bg-black"
         data-testid="hero-default"
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(235,32,42,0.25),transparent_50%)]" />
+        <div
+          className="absolute -left-[10%] top-[38%] w-[130%] h-16 md:h-24 -rotate-3"
+          style={{ background: "linear-gradient(90deg, #f4c430 0%, #f4c430 100%)" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10" />
         <div className="relative z-10 text-center px-4">
+          <motion.p
+            className="text-primary text-xs sm:text-sm font-bold tracking-[0.3em] uppercase mb-3"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            CU C Unit Admission Prep
+          </motion.p>
           <motion.h1
-            className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-4 whitespace-nowrap"
+            className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight leading-none"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
             data-testid="hero-title"
           >
-            Don't Just Study, Crack It!
+            Don't Just Study,<br className="hidden sm:block" /> <span className="text-primary">Crack</span> It.
           </motion.h1>
           <motion.p
-            className="text-sm sm:text-lg md:text-xl text-white/80 max-w-2xl mx-auto"
+            className="text-sm sm:text-lg md:text-xl text-white/70 max-w-2xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ duration: 0.6, delay: 0.25 }}
             data-testid="hero-tagline"
           >
-            Your ultimate platform for CU admission preparation
+            Video classes, mock tests and resources built for one goal: your seat at Chittagong University
           </motion.p>
         </div>
       </div>
@@ -838,11 +850,21 @@ function ClassesSection() {
               <CardContent className="flex-1">
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Calendar className="h-3.5 w-3.5" />
-                  <span data-testid={`text-class-date-${cls.id}`}>{format(new Date(cls.createdAt), "MMM dd, yyyy")}</span>
+                  <span data-testid={`text-class-date-${cls.id}`}>{format(new Date(cls.publishTime), "MMM dd, yyyy")}</span>
                 </div>
+                {new Date(cls.publishTime).getTime() > Date.now() && (
+                  <div className="mt-1">
+                    <CountdownTimer targetDate={new Date(cls.publishTime)} />
+                  </div>
+                )}
               </CardContent>
               <CardFooter>
-                {cls.access === "paid" && !user?.isPremium ? (
+                {new Date(cls.publishTime).getTime() > Date.now() ? (
+                  <Button size="sm" variant="outline" disabled data-testid={`button-upcoming-${cls.id}`}>
+                    <Clock className="h-3.5 w-3.5 mr-1" />
+                    Upcoming
+                  </Button>
+                ) : cls.access === "paid" && !user?.isPremium ? (
                   <Button size="sm" variant="outline" disabled data-testid={`button-premium-${cls.id}`}>Premium Only</Button>
                 ) : cls.access === "signin" && !user ? (
                   <Link href="/auth">

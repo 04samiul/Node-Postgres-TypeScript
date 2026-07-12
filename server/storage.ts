@@ -13,7 +13,7 @@ import {
   users, heroBanners, courses, mockTests, mockSubmissions, classes, resources, notices, teamMembers, enrollments, siteSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, and, or, sql } from "drizzle-orm";
+import { eq, desc, count, and, or, sql, lte } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -173,11 +173,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestMockTests(limit: number): Promise<MockTest[]> {
-    return db.select().from(mockTests).where(eq(mockTests.isVisible, true)).orderBy(desc(mockTests.createdAt)).limit(limit);
+    const visibleCutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    return db.select().from(mockTests).where(and(eq(mockTests.isVisible, true), lte(mockTests.publishTime, visibleCutoff))).orderBy(desc(mockTests.publishTime)).limit(limit);
   }
 
   async getMockTestsByCourseId(courseId: number): Promise<MockTest[]> {
-    return db.select().from(mockTests).where(and(eq(mockTests.courseId, courseId), eq(mockTests.isVisible, true))).orderBy(desc(mockTests.createdAt));
+    const visibleCutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    return db.select().from(mockTests).where(and(eq(mockTests.courseId, courseId), eq(mockTests.isVisible, true), lte(mockTests.publishTime, visibleCutoff))).orderBy(desc(mockTests.publishTime));
   }
 
   async getAllMockTests(): Promise<MockTest[]> {
@@ -195,8 +197,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestClasses(limit: number, offset: number = 0, tag?: string, freeOnly?: boolean): Promise<{ items: Class[], total: number }> {
+    const visibleCutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const conditions = [
       eq(classes.isVisible, true),
+      lte(classes.publishTime, visibleCutoff),
     ];
     if (tag && tag !== "All") conditions.push(eq(classes.tag, tag));
     if (freeOnly) {
@@ -208,12 +212,13 @@ export class DatabaseStorage implements IStorage {
 
     const [totalCount] = await db.select({ count: count() }).from(classes).where(and(...conditions));
 
-    const items = await query.orderBy(desc(classes.createdAt)).limit(limit).offset(offset);
+    const items = await query.orderBy(desc(classes.publishTime)).limit(limit).offset(offset);
     return { items, total: Number(totalCount.count) };
   }
 
   async getClassesByCourseId(courseId: number): Promise<Class[]> {
-    return db.select().from(classes).where(and(eq(classes.courseId, courseId), eq(classes.isVisible, true))).orderBy(desc(classes.createdAt));
+    const visibleCutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    return db.select().from(classes).where(and(eq(classes.courseId, courseId), eq(classes.isVisible, true), lte(classes.publishTime, visibleCutoff))).orderBy(desc(classes.publishTime));
   }
 
   async getAllClasses(): Promise<Class[]> {

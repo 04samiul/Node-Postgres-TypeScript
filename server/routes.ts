@@ -1474,7 +1474,16 @@ export async function registerRoutes(
     try {
       const data = { ...req.body, createdBy: req.session.userId };
       if (data.isVisible === undefined) data.isVisible = true;
+      if (data.publishTime) {
+        const parsed = parseBDTime(data.publishTime);
+        if (!parsed)
+          return res.status(400).json({ message: "Invalid publish time" });
+        data.publishTime = parsed;
+      } else {
+        data.publishTime = new Date();
+      }
       const cls = await storage.createClass(data);
+      pingIndexNow(["/classes"]);
       res.json(cls);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1493,6 +1502,7 @@ export async function registerRoutes(
         access,
         isVisible,
         courseId,
+        publishTime,
       } = req.body;
       const data: Record<string, any> = {};
       if (title !== undefined) data.title = title;
@@ -1503,8 +1513,15 @@ export async function registerRoutes(
       if (access !== undefined) data.access = access;
       if (isVisible !== undefined) data.isVisible = isVisible;
       if (courseId !== undefined) data.courseId = courseId === "" || courseId === null ? null : Number(courseId);
+      if (publishTime) {
+        const parsed = parseBDTime(publishTime);
+        if (!parsed)
+          return res.status(400).json({ message: "Invalid publish time" });
+        data.publishTime = parsed;
+      }
       const updated = await storage.updateClass(id, data);
       if (!updated) return res.status(404).json({ message: "Class not found" });
+      pingIndexNow(["/classes"]);
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

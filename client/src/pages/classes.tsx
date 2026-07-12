@@ -7,13 +7,49 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { RichTextDisplay } from "@/components/rich-text-editor";
-import { Calendar, Video, Play, Crown, Loader2, BookOpen, Lock } from "lucide-react";
+import { Calendar, Video, Play, Crown, Loader2, BookOpen, Lock, Clock } from "lucide-react";
 import type { Class, PaginatedResponse, Enrollment } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
 
 const FILTER_TAGS = ["All", "Free", "English", "Analytical Skill", "Problem Solving"];
+
+function getTimeRemaining(targetDate: Date) {
+  const total = new Date(targetDate).getTime() - Date.now();
+  if (total <= 0) return { total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
+  return {
+    total,
+    days: Math.floor(total / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((total / (1000 * 60 * 60)) % 24),
+    minutes: Math.floor((total / (1000 * 60)) % 60),
+    seconds: Math.floor((total / 1000) % 60),
+  };
+}
+
+function CountdownTimer({ targetDate, onReached }: { targetDate: Date; onReached?: () => void }) {
+  const [timeLeft, setTimeLeft] = useState(getTimeRemaining(targetDate));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const tl = getTimeRemaining(targetDate);
+      setTimeLeft(tl);
+      if (tl.total <= 0 && onReached) onReached();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate, onReached]);
+
+  if (timeLeft.total <= 0) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 text-sm font-mono text-muted-foreground" data-testid="countdown-timer">
+      <Clock className="h-3.5 w-3.5" />
+      <span>
+        {timeLeft.hours.toString().padStart(2, "0")}:{String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")}
+      </span>
+    </div>
+  );
+}
 
 export default function ClassesPage() {
   useSEO({ title: "Classes", description: "Watch expert video classes for CU admission preparation. Covering English, Analytical Skills, and Problem Solving subjects.", path: "/classes" });
@@ -141,11 +177,15 @@ export default function ClassesPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1">
-                  
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3" />
-                      <span>{format(new Date(cls.createdAt), "MMM dd, yyyy")}</span>
+                      <span>{format(new Date(cls.publishTime), "MMM dd, yyyy")}</span>
                     </div>
+                    {new Date(cls.publishTime).getTime() > Date.now() && (
+                      <div className="mt-1">
+                        <CountdownTimer targetDate={new Date(cls.publishTime)} />
+                      </div>
+                    )}
                   </CardContent>
                   <CardFooter className="pt-0">
                     <UserAction cls={cls} enrolledCourseIds={enrolledCourseIds} />
@@ -182,6 +222,15 @@ export default function ClassesPage() {
 
 function UserAction({ cls, enrolledCourseIds }: { cls: Class; enrolledCourseIds: Set<number> }) {
   const { user } = useAuth();
+
+  if (new Date(cls.publishTime).getTime() > Date.now()) {
+    return (
+      <Button size="sm" variant="outline" disabled data-testid={`button-upcoming-${cls.id}`}>
+        <Clock className="h-3.5 w-3.5 mr-1" />
+        Upcoming
+      </Button>
+    );
+  }
 
   if (cls.courseId) {
     if (!user) {
