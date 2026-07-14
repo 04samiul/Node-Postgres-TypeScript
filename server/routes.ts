@@ -1490,6 +1490,19 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/admin/classes/reorder", requireAdmin, async (req, res) => {
+    try {
+      const { updates } = req.body as { updates: { id: number; order: number }[] };
+      if (!Array.isArray(updates)) {
+        return res.status(400).json({ message: "updates must be an array" });
+      }
+      await storage.reorderClasses(updates);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.patch("/api/admin/classes/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);

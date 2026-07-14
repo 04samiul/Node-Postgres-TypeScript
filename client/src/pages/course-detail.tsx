@@ -98,9 +98,7 @@ export default function CourseDetailPage() {
   const { toast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
-  const [classSortOrder, setClassSortOrder] = useState<"newest" | "oldest">(
-    "oldest",
-  );
+  const [classSortOrder, setClassSortOrder] = useState<"newest" | "oldest">("oldest");
 
   const { data: course, isLoading: courseLoading } = useQuery<Course>({
     queryKey: ["/api/courses", courseId],
@@ -207,8 +205,7 @@ export default function CourseDetailPage() {
 
   function sortClasses(list: Class[]): Class[] {
     const sorted = [...list].sort(
-      (a, b) =>
-        new Date(a.publishTime).getTime() - new Date(b.publishTime).getTime(),
+      (a, b) => new Date(a.publishTime).getTime() - new Date(b.publishTime).getTime(),
     );
     return classSortOrder === "oldest" ? sorted : sorted.reverse();
   }
@@ -422,9 +419,7 @@ export default function CourseDetailPage() {
                           data-testid="button-sort-classes"
                         >
                           <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
-                          {classSortOrder === "oldest"
-                            ? "Oldest First"
-                            : "Newest First"}
+                          {classSortOrder === "oldest" ? "Oldest First" : "Newest First"}
                         </Button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

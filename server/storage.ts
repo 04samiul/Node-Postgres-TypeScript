@@ -41,6 +41,7 @@ export interface IStorage {
 
   getLatestClasses(limit: number, offset?: number, tag?: string, freeOnly?: boolean): Promise<{ items: Class[], total: number }>;
   getAllClasses(): Promise<Class[]>;
+  reorderClasses(updates: { id: number; order: number }[]): Promise<void>;
   createClass(data: InsertClass): Promise<Class>;
   getClassesByCourseId(courseId: number): Promise<Class[]>;
 
@@ -218,11 +219,17 @@ export class DatabaseStorage implements IStorage {
 
   async getClassesByCourseId(courseId: number): Promise<Class[]> {
     const visibleCutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    return db.select().from(classes).where(and(eq(classes.courseId, courseId), eq(classes.isVisible, true), lte(classes.publishTime, visibleCutoff))).orderBy(desc(classes.publishTime));
+    return db.select().from(classes).where(and(eq(classes.courseId, courseId), eq(classes.isVisible, true), lte(classes.publishTime, visibleCutoff))).orderBy(classes.order, classes.publishTime);
   }
 
   async getAllClasses(): Promise<Class[]> {
-    return db.select().from(classes).orderBy(desc(classes.createdAt));
+    return db.select().from(classes).orderBy(classes.tag, classes.order);
+  }
+
+  async reorderClasses(updates: { id: number; order: number }[]): Promise<void> {
+    for (const u of updates) {
+      await db.update(classes).set({ order: u.order }).where(eq(classes.id, u.id));
+    }
   }
 
   async createClass(data: InsertClass): Promise<Class> {
