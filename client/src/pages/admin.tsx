@@ -2603,6 +2603,7 @@ function ClassesTab() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [editData, setEditData] = useState<Record<string, any>>({});
   const [reorderMode, setReorderMode] = useState(false);
+  const [courseFilter, setCourseFilter] = useState<string>("__all__");
   const deleteMutation = useDeleteMutation(
     "/api/admin/classes",
     "/api/admin/classes",
@@ -2663,7 +2664,7 @@ function ClassesTab() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
         {!isCreating ? (
           <Button
             size="sm"
@@ -2682,6 +2683,27 @@ function ClassesTab() {
           <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
           {reorderMode ? "Done Reordering" : "Reorder Classes"}
         </Button>
+        {!reorderMode && (
+          <Select value={courseFilter} onValueChange={setCourseFilter}>
+            <SelectTrigger
+              className="w-56 h-8 text-xs"
+              data-testid="select-class-course-filter"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Classes</SelectItem>
+              <SelectItem value="__standalone__">
+                Standalone (no course)
+              </SelectItem>
+              {courseList?.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {reorderMode ? (
@@ -2878,259 +2900,270 @@ function ClassesTab() {
             <Skeleton className="h-48 w-full mt-4" />
           ) : (
             <div className="space-y-2 mt-4">
-              {classList?.map((cls) => (
-                <Card key={cls.id} data-testid={`card-class-${cls.id}`}>
-                  <CardContent className="pt-4">
-                    {editingId === cls.id ? (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const courseIdVal =
-                            editData.courseId &&
-                            editData.courseId !== "__none__"
-                              ? Number(editData.courseId)
-                              : null;
-                          const publishTimeWithTZ = editData.publishTime
-                            ? editData.publishTime + "+06:00"
-                            : undefined;
-                          updateMutation.mutate({
-                            id: cls.id,
-                            data: {
-                              ...editData,
-                              publishTime: publishTimeWithTZ,
-                              courseId: courseIdVal,
-                            },
-                          });
-                        }}
-                        className="space-y-3"
-                      >
-                        <div>
-                          <Label className="text-xs">Title</Label>
-                          <Input
-                            value={editData.title || ""}
-                            onChange={(e) =>
-                              setEditData({
+              {classList
+                ?.filter((cls) => {
+                  if (courseFilter === "__all__") return true;
+                  if (courseFilter === "__standalone__") return !cls.courseId;
+                  return String(cls.courseId) === courseFilter;
+                })
+                .map((cls) => (
+                  <Card key={cls.id} data-testid={`card-class-${cls.id}`}>
+                    <CardContent className="pt-4">
+                      {editingId === cls.id ? (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const courseIdVal =
+                              editData.courseId &&
+                              editData.courseId !== "__none__"
+                                ? Number(editData.courseId)
+                                : null;
+                            const publishTimeWithTZ = editData.publishTime
+                              ? editData.publishTime + "+06:00"
+                              : undefined;
+                            updateMutation.mutate({
+                              id: cls.id,
+                              data: {
                                 ...editData,
-                                title: e.target.value,
-                              })
-                            }
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Video URL</Label>
-                          <Input
-                            value={editData.videoUrl || ""}
-                            onChange={(e) =>
-                              setEditData({
-                                ...editData,
-                                videoUrl: e.target.value,
-                              })
-                            }
-                            required
-                          />
-                        </div>
-                        <ImageUploader
-                          label="Thumbnail"
-                          value={editData.thumbnail || ""}
-                          onChange={(url) =>
-                            setEditData({ ...editData, thumbnail: url })
-                          }
-                        />
-                        <div>
-                          <Label className="text-xs">Tag</Label>
-                          <Select
-                            value={editData.tag || ""}
-                            onValueChange={(v) =>
-                              setEditData({ ...editData, tag: v })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CLASS_TAGS.map((t) => (
-                                <SelectItem key={t} value={t}>
-                                  {t}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label className="text-xs flex items-center gap-1">
-                            <Calendar className="h-3 w-3" /> Publish Date & Time
-                            (Bangladesh Time)
-                          </Label>
-                          <Input
-                            type="datetime-local"
-                            value={editData.publishTime || ""}
-                            onChange={(e) =>
-                              setEditData({
-                                ...editData,
-                                publishTime: e.target.value,
-                              })
-                            }
-                            data-testid="input-edit-class-publish-time"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Description</Label>
-                          <RichTextEditor
-                            value={editData.description || ""}
-                            onChange={(val) =>
-                              setEditData({ ...editData, description: val })
-                            }
-                            placeholder="Enter description..."
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Course (optional)</Label>
-                          <Select
-                            value={String(editData.courseId || "__none__")}
-                            onValueChange={(v) =>
-                              setEditData({ ...editData, courseId: v })
-                            }
-                          >
-                            <SelectTrigger data-testid="select-edit-class-course">
-                              <SelectValue placeholder="Standalone (no course)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">
-                                Standalone (no course)
-                              </SelectItem>
-                              {courseList?.map((c) => (
-                                <SelectItem key={c.id} value={String(c.id)}>
-                                  {c.title}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
+                                publishTime: publishTimeWithTZ,
+                                courseId: courseIdVal,
+                              },
+                            });
+                          }}
+                          className="space-y-3"
+                        >
                           <div>
-                            <Label className="text-xs">Access</Label>
+                            <Label className="text-xs">Title</Label>
+                            <Input
+                              value={editData.title || ""}
+                              onChange={(e) =>
+                                setEditData({
+                                  ...editData,
+                                  title: e.target.value,
+                                })
+                              }
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Video URL</Label>
+                            <Input
+                              value={editData.videoUrl || ""}
+                              onChange={(e) =>
+                                setEditData({
+                                  ...editData,
+                                  videoUrl: e.target.value,
+                                })
+                              }
+                              required
+                            />
+                          </div>
+                          <ImageUploader
+                            label="Thumbnail"
+                            value={editData.thumbnail || ""}
+                            onChange={(url) =>
+                              setEditData({ ...editData, thumbnail: url })
+                            }
+                          />
+                          <div>
+                            <Label className="text-xs">Tag</Label>
                             <Select
-                              value={editData.access || "all"}
+                              value={editData.tag || ""}
                               onValueChange={(v) =>
-                                setEditData({ ...editData, access: v })
+                                setEditData({ ...editData, tag: v })
                               }
                             >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {ACCESS_LEVELS.map((a) => (
-                                  <SelectItem key={a} value={a}>
-                                    {a}
+                                {CLASS_TAGS.map((t) => (
+                                  <SelectItem key={t} value={t}>
+                                    {t}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="flex items-center gap-2 pt-5">
-                            <Label className="text-xs">Visible</Label>
-                            <Switch
-                              checked={editData.isVisible ?? true}
-                              onCheckedChange={(v) =>
-                                setEditData({ ...editData, isVisible: v })
+                          <div>
+                            <Label className="text-xs flex items-center gap-1">
+                              <Calendar className="h-3 w-3" /> Publish Date &
+                              Time (Bangladesh Time)
+                            </Label>
+                            <Input
+                              type="datetime-local"
+                              value={editData.publishTime || ""}
+                              onChange={(e) =>
+                                setEditData({
+                                  ...editData,
+                                  publishTime: e.target.value,
+                                })
                               }
+                              data-testid="input-edit-class-publish-time"
                             />
                           </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            type="submit"
-                            size="sm"
-                            disabled={updateMutation.isPending}
-                          >
-                            {updateMutation.isPending && (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                            )}
-                            Save
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingId(null)}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </form>
-                    ) : (
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div className="flex gap-3 min-w-0">
-                          {cls.thumbnail && (
-                            <img
-                              src={cls.thumbnail}
-                              alt=""
-                              className="w-16 h-12 rounded-md object-cover shrink-0"
+                          <div>
+                            <Label className="text-xs">Description</Label>
+                            <RichTextEditor
+                              value={editData.description || ""}
+                              onChange={(val) =>
+                                setEditData({ ...editData, description: val })
+                              }
+                              placeholder="Enter description..."
                             />
-                          )}
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium">{cls.title}</p>
-                            <div className="flex items-center gap-2 flex-wrap mt-1">
-                              <Badge variant="secondary" className="text-xs">
-                                {cls.tag}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {cls.access}
-                              </span>
-                              {cls.courseId &&
-                                courseList?.find(
-                                  (c) => c.id === cls.courseId,
-                                ) && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs"
-                                    data-testid={`badge-class-course-${cls.id}`}
-                                  >
-                                    {
-                                      courseList.find(
-                                        (c) => c.id === cls.courseId,
-                                      )!.title
-                                    }
-                                  </Badge>
-                                )}
+                          </div>
+                          <div>
+                            <Label className="text-xs">Course (optional)</Label>
+                            <Select
+                              value={String(editData.courseId || "__none__")}
+                              onValueChange={(v) =>
+                                setEditData({ ...editData, courseId: v })
+                              }
+                            >
+                              <SelectTrigger data-testid="select-edit-class-course">
+                                <SelectValue placeholder="Standalone (no course)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">
+                                  Standalone (no course)
+                                </SelectItem>
+                                {courseList?.map((c) => (
+                                  <SelectItem key={c.id} value={String(c.id)}>
+                                    {c.title}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs">Access</Label>
+                              <Select
+                                value={editData.access || "all"}
+                                onValueChange={(v) =>
+                                  setEditData({ ...editData, access: v })
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ACCESS_LEVELS.map((a) => (
+                                    <SelectItem key={a} value={a}>
+                                      {a}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex items-center gap-2 pt-5">
+                              <Label className="text-xs">Visible</Label>
+                              <Switch
+                                checked={editData.isVisible ?? true}
+                                onCheckedChange={(v) =>
+                                  setEditData({ ...editData, isVisible: v })
+                                }
+                              />
                             </div>
                           </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="submit"
+                              size="sm"
+                              disabled={updateMutation.isPending}
+                            >
+                              {updateMutation.isPending && (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                              )}
+                              Save
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingId(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div className="flex gap-3 min-w-0">
+                            {cls.thumbnail && (
+                              <img
+                                src={cls.thumbnail}
+                                alt=""
+                                className="w-16 h-12 rounded-md object-cover shrink-0"
+                              />
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">{cls.title}</p>
+                              <div className="flex items-center gap-2 flex-wrap mt-1">
+                                <Badge variant="secondary" className="text-xs">
+                                  {cls.tag}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {cls.access}
+                                </span>
+                                {cls.courseId &&
+                                  courseList?.find(
+                                    (c) => c.id === cls.courseId,
+                                  ) && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                      data-testid={`badge-class-course-${cls.id}`}
+                                    >
+                                      {
+                                        courseList.find(
+                                          (c) => c.id === cls.courseId,
+                                        )!.title
+                                      }
+                                    </Badge>
+                                  )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Badge
+                              variant={cls.isVisible ? "default" : "outline"}
+                            >
+                              {cls.isVisible ? "Visible" : "Hidden"}
+                            </Badge>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => startEdit(cls)}
+                              data-testid={`button-edit-class-${cls.id}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                if (confirm("Delete this class?"))
+                                  deleteMutation.mutate(cls.id);
+                              }}
+                              data-testid={`button-delete-class-${cls.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Badge
-                            variant={cls.isVisible ? "default" : "outline"}
-                          >
-                            {cls.isVisible ? "Visible" : "Hidden"}
-                          </Badge>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => startEdit(cls)}
-                            data-testid={`button-edit-class-${cls.id}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => {
-                              if (confirm("Delete this class?"))
-                                deleteMutation.mutate(cls.id);
-                            }}
-                            data-testid={`button-delete-class-${cls.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-              {(!classList || classList.length === 0) && (
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              {(!classList ||
+                classList.filter((cls) => {
+                  if (courseFilter === "__all__") return true;
+                  if (courseFilter === "__standalone__") return !cls.courseId;
+                  return String(cls.courseId) === courseFilter;
+                }).length === 0) && (
                 <p className="text-sm text-muted-foreground mt-4">
-                  No classes yet.
+                  No classes match this filter.
                 </p>
               )}
             </div>
