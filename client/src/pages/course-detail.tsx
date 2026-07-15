@@ -436,9 +436,7 @@ export default function CourseDetailPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="default">
-                              Default Order
-                            </SelectItem>
+                            <SelectItem value="default">Default</SelectItem>
                             <SelectItem value="oldest">Oldest First</SelectItem>
                             <SelectItem value="newest">Newest First</SelectItem>
                           </SelectContent>
