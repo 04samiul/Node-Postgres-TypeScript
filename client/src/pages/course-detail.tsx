@@ -13,6 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RichTextDisplay } from "@/components/rich-text-editor";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -98,7 +105,9 @@ export default function CourseDetailPage() {
   const { toast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
-  const [classSortOrder, setClassSortOrder] = useState<"newest" | "oldest">("oldest");
+  const [classSortOrder, setClassSortOrder] = useState<
+    "default" | "newest" | "oldest"
+  >("default");
 
   const { data: course, isLoading: courseLoading } = useQuery<Course>({
     queryKey: ["/api/courses", courseId],
@@ -204,8 +213,12 @@ export default function CourseDetailPage() {
   }, [allSubjects.join("|"), activeSubject]);
 
   function sortClasses(list: Class[]): Class[] {
+    if (classSortOrder === "default") {
+      return [...list].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
     const sorted = [...list].sort(
-      (a, b) => new Date(a.publishTime).getTime() - new Date(b.publishTime).getTime(),
+      (a, b) =>
+        new Date(a.publishTime).getTime() - new Date(b.publishTime).getTime(),
     );
     return classSortOrder === "oldest" ? sorted : sorted.reverse();
   }
@@ -407,20 +420,29 @@ export default function CourseDetailPage() {
                           <Video className="h-4 w-4" /> Classes (
                           {currentClasses.length})
                         </h3>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs text-muted-foreground"
-                          onClick={() =>
-                            setClassSortOrder((prev) =>
-                              prev === "oldest" ? "newest" : "oldest",
+                        <Select
+                          value={classSortOrder}
+                          onValueChange={(v) =>
+                            setClassSortOrder(
+                              v as "default" | "newest" | "oldest",
                             )
                           }
-                          data-testid="button-sort-classes"
                         >
-                          <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
-                          {classSortOrder === "oldest" ? "Oldest First" : "Newest First"}
-                        </Button>
+                          <SelectTrigger
+                            className="w-40 h-7 text-xs"
+                            data-testid="select-sort-classes"
+                          >
+                            <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="default">
+                              Default Order
+                            </SelectItem>
+                            <SelectItem value="oldest">Oldest First</SelectItem>
+                            <SelectItem value="newest">Newest First</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {currentClasses.map((cls) => (
