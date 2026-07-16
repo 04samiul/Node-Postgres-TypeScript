@@ -1,16 +1,36 @@
 import {
-  type User, type InsertUser,
-  type HeroBanner, type InsertHeroBanner,
-  type Course, type InsertCourse,
-  type MockTest, type InsertMockTest,
-  type MockSubmission, type InsertMockSubmission,
-  type Class, type InsertClass,
-  type Resource, type InsertResource,
-  type Notice, type InsertNotice,
-  type TeamMember, type InsertTeamMember,
-  type Enrollment, type InsertEnrollment,
+  type User,
+  type InsertUser,
+  type HeroBanner,
+  type InsertHeroBanner,
+  type Course,
+  type InsertCourse,
+  type MockTest,
+  type InsertMockTest,
+  type MockSubmission,
+  type InsertMockSubmission,
+  type Class,
+  type InsertClass,
+  type Resource,
+  type InsertResource,
+  type Notice,
+  type InsertNotice,
+  type TeamMember,
+  type InsertTeamMember,
+  type Enrollment,
+  type InsertEnrollment,
   type SiteSetting,
-  users, heroBanners, courses, mockTests, mockSubmissions, classes, resources, notices, teamMembers, enrollments, siteSettings,
+  users,
+  heroBanners,
+  courses,
+  mockTests,
+  mockSubmissions,
+  classes,
+  resources,
+  notices,
+  teamMembers,
+  enrollments,
+  siteSettings,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, and, or, sql, lte } from "drizzle-orm";
@@ -22,7 +42,11 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUser(id: number, data: Partial<User>): Promise<User | undefined>;
-  bulkUpdateUsersByYear(hscYear: string, sscYear: string, data: Partial<User>): Promise<number>;
+  bulkUpdateUsersByYear(
+    hscYear: string,
+    sscYear: string,
+    data: Partial<User>,
+  ): Promise<number>;
 
   getHeroBanners(): Promise<HeroBanner[]>;
   getAllHeroBanners(): Promise<HeroBanner[]>;
@@ -39,7 +63,12 @@ export interface IStorage {
   createMockTest(data: InsertMockTest): Promise<MockTest>;
   getMockTestsByCourseId(courseId: number): Promise<MockTest[]>;
 
-  getLatestClasses(limit: number, offset?: number, tag?: string, freeOnly?: boolean): Promise<{ items: Class[], total: number }>;
+  getLatestClasses(
+    limit: number,
+    offset?: number,
+    tag?: string,
+    freeOnly?: boolean,
+  ): Promise<{ items: Class[]; total: number }>;
   getAllClasses(): Promise<Class[]>;
   reorderClasses(updates: { id: number; order: number }[]): Promise<void>;
   createClass(data: InsertClass): Promise<Class>;
@@ -62,37 +91,65 @@ export interface IStorage {
   getSubmission(id: number): Promise<MockSubmission | undefined>;
   getUserSubmissions(userId: number): Promise<MockSubmission[]>;
   getSubmissionsByMockTestId(mockTestId: number): Promise<any[]>;
-  updateSubmission(id: number, data: Partial<MockSubmission>): Promise<MockSubmission | undefined>;
-  getInProgressSubmission(userId: number, mockTestId: number): Promise<MockSubmission | undefined>;
+  updateSubmission(
+    id: number,
+    data: Partial<MockSubmission>,
+  ): Promise<MockSubmission | undefined>;
+  getInProgressSubmission(
+    userId: number,
+    mockTestId: number,
+  ): Promise<MockSubmission | undefined>;
   getInProgressSubmissions(userId: number): Promise<any[]>;
   deleteSubmission(id: number): Promise<boolean>;
 
   updateCourse(id: number, data: Partial<Course>): Promise<Course | undefined>;
   deleteCourse(id: number): Promise<boolean>;
 
-  updateMockTest(id: number, data: Partial<MockTest>): Promise<MockTest | undefined>;
+  updateMockTest(
+    id: number,
+    data: Partial<MockTest>,
+  ): Promise<MockTest | undefined>;
   deleteMockTest(id: number): Promise<boolean>;
 
   updateClass(id: number, data: Partial<Class>): Promise<Class | undefined>;
   deleteClass(id: number): Promise<boolean>;
 
-  updateResource(id: number, data: Partial<Resource>): Promise<Resource | undefined>;
+  updateResource(
+    id: number,
+    data: Partial<Resource>,
+  ): Promise<Resource | undefined>;
   deleteResource(id: number): Promise<boolean>;
 
   updateNotice(id: number, data: Partial<Notice>): Promise<Notice | undefined>;
   deleteNotice(id: number): Promise<boolean>;
 
-  updateHeroBanner(id: number, data: Partial<HeroBanner>): Promise<HeroBanner | undefined>;
+  updateHeroBanner(
+    id: number,
+    data: Partial<HeroBanner>,
+  ): Promise<HeroBanner | undefined>;
   deleteHeroBanner(id: number): Promise<boolean>;
 
-  updateTeamMember(id: number, data: Partial<TeamMember>): Promise<TeamMember | undefined>;
+  updateTeamMember(
+    id: number,
+    data: Partial<TeamMember>,
+  ): Promise<TeamMember | undefined>;
   deleteTeamMember(id: number): Promise<boolean>;
 
   createEnrollment(data: InsertEnrollment): Promise<Enrollment>;
   getUserEnrollments(userId: number): Promise<Enrollment[]>;
-  getUserEnrollmentsWithCourses(userId: number): Promise<(Enrollment & { courseTitle: string; courseBanner: string | null })[]>;
-  getEnrollment(userId: number, courseId: number): Promise<Enrollment | undefined>;
-  updateEnrollment(id: number, data: Partial<Enrollment>): Promise<Enrollment | undefined>;
+  getUserEnrollmentsWithCourses(
+    userId: number,
+  ): Promise<
+    (Enrollment & { courseTitle: string; courseBanner: string | null })[]
+  >;
+  getEnrollment(
+    userId: number,
+    courseId: number,
+  ): Promise<Enrollment | undefined>;
+  updateEnrollment(
+    id: number,
+    data: Partial<Enrollment>,
+  ): Promise<Enrollment | undefined>;
   deleteEnrollment(id: number): Promise<boolean>;
   getEnrollmentsByCourseId(courseId: number): Promise<Enrollment[]>;
   getAllEnrollments(): Promise<Enrollment[]>;
@@ -110,12 +167,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
     return user;
   }
 
   async getUserByWhatsapp(whatsapp: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.whatsapp, whatsapp));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.whatsapp, whatsapp));
     return user;
   }
 
@@ -129,21 +192,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
-    const [user] = await db.update(users).set(data).where(eq(users.id, id)).returning();
+    const [user] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
     return user;
   }
 
-  async bulkUpdateUsersByYear(hscYear: string, sscYear: string, data: Partial<User>): Promise<number> {
+  async bulkUpdateUsersByYear(
+    hscYear: string,
+    sscYear: string,
+    data: Partial<User>,
+  ): Promise<number> {
     const conditions = [];
     if (hscYear) conditions.push(eq(users.hscYear, hscYear));
     if (sscYear) conditions.push(eq(users.sscYear, sscYear));
     if (conditions.length === 0) return 0;
-    const result = await db.update(users).set(data).where(and(...conditions)).returning();
+    const result = await db
+      .update(users)
+      .set(data)
+      .where(and(...conditions))
+      .returning();
     return result.length;
   }
 
   async getHeroBanners(): Promise<HeroBanner[]> {
-    return db.select().from(heroBanners).where(eq(heroBanners.isVisible, true)).orderBy(heroBanners.sortOrder);
+    return db
+      .select()
+      .from(heroBanners)
+      .where(eq(heroBanners.isVisible, true))
+      .orderBy(heroBanners.sortOrder);
   }
 
   async getAllHeroBanners(): Promise<HeroBanner[]> {
@@ -156,7 +235,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestCourses(limit: number): Promise<Course[]> {
-    return db.select().from(courses).where(eq(courses.isVisible, true)).orderBy(desc(courses.createdAt)).limit(limit);
+    return db
+      .select()
+      .from(courses)
+      .where(eq(courses.isVisible, true))
+      .orderBy(desc(courses.createdAt))
+      .limit(limit);
   }
 
   async getAllCourses(): Promise<Course[]> {
@@ -175,12 +259,32 @@ export class DatabaseStorage implements IStorage {
 
   async getLatestMockTests(limit: number): Promise<MockTest[]> {
     const visibleCutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    return db.select().from(mockTests).where(and(eq(mockTests.isVisible, true), lte(mockTests.publishTime, visibleCutoff))).orderBy(desc(mockTests.publishTime)).limit(limit);
+    return db
+      .select()
+      .from(mockTests)
+      .where(
+        and(
+          eq(mockTests.isVisible, true),
+          lte(mockTests.publishTime, visibleCutoff),
+        ),
+      )
+      .orderBy(desc(mockTests.publishTime))
+      .limit(limit);
   }
 
   async getMockTestsByCourseId(courseId: number): Promise<MockTest[]> {
     const visibleCutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    return db.select().from(mockTests).where(and(eq(mockTests.courseId, courseId), eq(mockTests.isVisible, true), lte(mockTests.publishTime, visibleCutoff))).orderBy(desc(mockTests.publishTime));
+    return db
+      .select()
+      .from(mockTests)
+      .where(
+        and(
+          eq(mockTests.courseId, courseId),
+          eq(mockTests.isVisible, true),
+          lte(mockTests.publishTime, visibleCutoff),
+        ),
+      )
+      .orderBy(desc(mockTests.publishTime));
   }
 
   async getAllMockTests(): Promise<MockTest[]> {
@@ -188,7 +292,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMockTest(id: number): Promise<MockTest | undefined> {
-    const [test] = await db.select().from(mockTests).where(eq(mockTests.id, id));
+    const [test] = await db
+      .select()
+      .from(mockTests)
+      .where(eq(mockTests.id, id));
     return test;
   }
 
@@ -197,7 +304,12 @@ export class DatabaseStorage implements IStorage {
     return test;
   }
 
-  async getLatestClasses(limit: number, offset: number = 0, tag?: string, freeOnly?: boolean): Promise<{ items: Class[], total: number }> {
+  async getLatestClasses(
+    limit: number,
+    offset: number = 0,
+    tag?: string,
+    freeOnly?: boolean,
+  ): Promise<{ items: Class[]; total: number }> {
     const visibleCutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const conditions = [
       eq(classes.isVisible, true),
@@ -205,30 +317,59 @@ export class DatabaseStorage implements IStorage {
     ];
     if (tag && tag !== "All") conditions.push(eq(classes.tag, tag));
     if (freeOnly) {
-      conditions.push(or(eq(classes.access, "all"), eq(classes.access, "signin"))!);
+      conditions.push(
+        or(eq(classes.access, "all"), eq(classes.access, "signin"))!,
+      );
       conditions.push(sql`${classes.courseId} IS NULL`);
     }
 
-    const query = db.select().from(classes).where(and(...conditions));
+    const query = db
+      .select()
+      .from(classes)
+      .where(and(...conditions));
 
-    const [totalCount] = await db.select({ count: count() }).from(classes).where(and(...conditions));
+    const [totalCount] = await db
+      .select({ count: count() })
+      .from(classes)
+      .where(and(...conditions));
 
-    const items = await query.orderBy(desc(classes.publishTime)).limit(limit).offset(offset);
+    const items = await query
+      .orderBy(
+        sql`(${classes.courseId} IS NULL) DESC`,
+        desc(classes.publishTime),
+      )
+      .limit(limit)
+      .offset(offset);
     return { items, total: Number(totalCount.count) };
   }
 
   async getClassesByCourseId(courseId: number): Promise<Class[]> {
     const visibleCutoff = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    return db.select().from(classes).where(and(eq(classes.courseId, courseId), eq(classes.isVisible, true), lte(classes.publishTime, visibleCutoff))).orderBy(classes.order, classes.publishTime);
+    return db
+      .select()
+      .from(classes)
+      .where(
+        and(
+          eq(classes.courseId, courseId),
+          eq(classes.isVisible, true),
+          lte(classes.publishTime, visibleCutoff),
+        ),
+      )
+      .orderBy(classes.order, classes.publishTime);
   }
 
   async getAllClasses(): Promise<Class[]> {
     return db.select().from(classes).orderBy(classes.tag, classes.order);
   }
 
-  async reorderClasses(updates: { id: number; order: number }[]): Promise<void> {
+  async reorderClasses(
+    updates: { id: number; order: number }[],
+  ): Promise<void> {
     for (const u of updates) {
-      await db.update(classes).set({ order: u.order }).where(eq(classes.id, u.id));
+      await db
+        .update(classes)
+        .set({ order: u.order })
+        .where(eq(classes.id, u.id));
     }
   }
 
@@ -238,11 +379,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestResources(limit: number): Promise<Resource[]> {
-    return db.select().from(resources).where(eq(resources.isVisible, true)).orderBy(desc(resources.createdAt)).limit(limit);
+    return db
+      .select()
+      .from(resources)
+      .where(eq(resources.isVisible, true))
+      .orderBy(desc(resources.createdAt))
+      .limit(limit);
   }
 
   async getResourcesByCourseId(courseId: number): Promise<Resource[]> {
-    return db.select().from(resources).where(and(eq(resources.courseId, courseId), eq(resources.isVisible, true))).orderBy(desc(resources.createdAt));
+    return db
+      .select()
+      .from(resources)
+      .where(
+        and(eq(resources.courseId, courseId), eq(resources.isVisible, true)),
+      )
+      .orderBy(desc(resources.createdAt));
   }
 
   async getAllResources(): Promise<Resource[]> {
@@ -255,7 +407,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestNotices(limit: number): Promise<Notice[]> {
-    return db.select().from(notices).where(eq(notices.isVisible, true)).orderBy(desc(notices.createdAt)).limit(limit);
+    return db
+      .select()
+      .from(notices)
+      .where(eq(notices.isVisible, true))
+      .orderBy(desc(notices.createdAt))
+      .limit(limit);
   }
 
   async getAllNotices(): Promise<Notice[]> {
@@ -268,7 +425,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTeamMembers(): Promise<TeamMember[]> {
-    return db.select().from(teamMembers).where(eq(teamMembers.isVisible, true)).orderBy(teamMembers.sortOrder);
+    return db
+      .select()
+      .from(teamMembers)
+      .where(eq(teamMembers.isVisible, true))
+      .orderBy(teamMembers.sortOrder);
   }
 
   async getAllTeamMembers(): Promise<TeamMember[]> {
@@ -280,8 +441,15 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
 
-  async updateCourse(id: number, data: Partial<Course>): Promise<Course | undefined> {
-    const [course] = await db.update(courses).set(data).where(eq(courses.id, id)).returning();
+  async updateCourse(
+    id: number,
+    data: Partial<Course>,
+  ): Promise<Course | undefined> {
+    const [course] = await db
+      .update(courses)
+      .set(data)
+      .where(eq(courses.id, id))
+      .returning();
     return course;
   }
 
@@ -290,8 +458,15 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async updateMockTest(id: number, data: Partial<MockTest>): Promise<MockTest | undefined> {
-    const [test] = await db.update(mockTests).set(data).where(eq(mockTests.id, id)).returning();
+  async updateMockTest(
+    id: number,
+    data: Partial<MockTest>,
+  ): Promise<MockTest | undefined> {
+    const [test] = await db
+      .update(mockTests)
+      .set(data)
+      .where(eq(mockTests.id, id))
+      .returning();
     return test;
   }
 
@@ -301,8 +476,15 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async updateClass(id: number, data: Partial<Class>): Promise<Class | undefined> {
-    const [cls] = await db.update(classes).set(data).where(eq(classes.id, id)).returning();
+  async updateClass(
+    id: number,
+    data: Partial<Class>,
+  ): Promise<Class | undefined> {
+    const [cls] = await db
+      .update(classes)
+      .set(data)
+      .where(eq(classes.id, id))
+      .returning();
     return cls;
   }
 
@@ -311,8 +493,15 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async updateResource(id: number, data: Partial<Resource>): Promise<Resource | undefined> {
-    const [resource] = await db.update(resources).set(data).where(eq(resources.id, id)).returning();
+  async updateResource(
+    id: number,
+    data: Partial<Resource>,
+  ): Promise<Resource | undefined> {
+    const [resource] = await db
+      .update(resources)
+      .set(data)
+      .where(eq(resources.id, id))
+      .returning();
     return resource;
   }
 
@@ -321,8 +510,15 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async updateNotice(id: number, data: Partial<Notice>): Promise<Notice | undefined> {
-    const [notice] = await db.update(notices).set(data).where(eq(notices.id, id)).returning();
+  async updateNotice(
+    id: number,
+    data: Partial<Notice>,
+  ): Promise<Notice | undefined> {
+    const [notice] = await db
+      .update(notices)
+      .set(data)
+      .where(eq(notices.id, id))
+      .returning();
     return notice;
   }
 
@@ -331,8 +527,15 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async updateHeroBanner(id: number, data: Partial<HeroBanner>): Promise<HeroBanner | undefined> {
-    const [banner] = await db.update(heroBanners).set(data).where(eq(heroBanners.id, id)).returning();
+  async updateHeroBanner(
+    id: number,
+    data: Partial<HeroBanner>,
+  ): Promise<HeroBanner | undefined> {
+    const [banner] = await db
+      .update(heroBanners)
+      .set(data)
+      .where(eq(heroBanners.id, id))
+      .returning();
     return banner;
   }
 
@@ -341,8 +544,15 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async updateTeamMember(id: number, data: Partial<TeamMember>): Promise<TeamMember | undefined> {
-    const [member] = await db.update(teamMembers).set(data).where(eq(teamMembers.id, id)).returning();
+  async updateTeamMember(
+    id: number,
+    data: Partial<TeamMember>,
+  ): Promise<TeamMember | undefined> {
+    const [member] = await db
+      .update(teamMembers)
+      .set(data)
+      .where(eq(teamMembers.id, id))
+      .returning();
     return member;
   }
 
@@ -357,12 +567,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSubmission(id: number): Promise<MockSubmission | undefined> {
-    const [sub] = await db.select().from(mockSubmissions).where(eq(mockSubmissions.id, id));
+    const [sub] = await db
+      .select()
+      .from(mockSubmissions)
+      .where(eq(mockSubmissions.id, id));
     return sub;
   }
 
   async getUserSubmissions(userId: number): Promise<MockSubmission[]> {
-    return db.select().from(mockSubmissions).where(eq(mockSubmissions.userId, userId)).orderBy(desc(mockSubmissions.startedAt));
+    return db
+      .select()
+      .from(mockSubmissions)
+      .where(eq(mockSubmissions.userId, userId))
+      .orderBy(desc(mockSubmissions.startedAt));
   }
 
   async getSubmissionsByMockTestId(mockTestId: number): Promise<any[]> {
@@ -392,35 +609,62 @@ export class DatabaseStorage implements IStorage {
     return rows;
   }
 
-  async updateSubmission(id: number, data: Partial<MockSubmission>): Promise<MockSubmission | undefined> {
-    const [sub] = await db.update(mockSubmissions).set(data).where(eq(mockSubmissions.id, id)).returning();
+  async updateSubmission(
+    id: number,
+    data: Partial<MockSubmission>,
+  ): Promise<MockSubmission | undefined> {
+    const [sub] = await db
+      .update(mockSubmissions)
+      .set(data)
+      .where(eq(mockSubmissions.id, id))
+      .returning();
     return sub;
   }
 
-  async getInProgressSubmission(userId: number, mockTestId: number): Promise<MockSubmission | undefined> {
-    const [sub] = await db.select().from(mockSubmissions)
-      .where(and(eq(mockSubmissions.userId, userId), eq(mockSubmissions.mockTestId, mockTestId), eq(mockSubmissions.isSubmitted, false)))
+  async getInProgressSubmission(
+    userId: number,
+    mockTestId: number,
+  ): Promise<MockSubmission | undefined> {
+    const [sub] = await db
+      .select()
+      .from(mockSubmissions)
+      .where(
+        and(
+          eq(mockSubmissions.userId, userId),
+          eq(mockSubmissions.mockTestId, mockTestId),
+          eq(mockSubmissions.isSubmitted, false),
+        ),
+      )
       .orderBy(desc(mockSubmissions.startedAt))
       .limit(1);
     return sub;
   }
 
   async getInProgressSubmissions(userId: number): Promise<any[]> {
-    return db.select({
-      id: mockSubmissions.id,
-      mockTestId: mockSubmissions.mockTestId,
-      answers: mockSubmissions.answers,
-      startedAt: mockSubmissions.startedAt,
-      mockTestTitle: mockTests.title,
-      mockTestDuration: mockTests.duration,
-    }).from(mockSubmissions)
+    return db
+      .select({
+        id: mockSubmissions.id,
+        mockTestId: mockSubmissions.mockTestId,
+        answers: mockSubmissions.answers,
+        startedAt: mockSubmissions.startedAt,
+        mockTestTitle: mockTests.title,
+        mockTestDuration: mockTests.duration,
+      })
+      .from(mockSubmissions)
       .innerJoin(mockTests, eq(mockSubmissions.mockTestId, mockTests.id))
-      .where(and(eq(mockSubmissions.userId, userId), eq(mockSubmissions.isSubmitted, false)))
+      .where(
+        and(
+          eq(mockSubmissions.userId, userId),
+          eq(mockSubmissions.isSubmitted, false),
+        ),
+      )
       .orderBy(desc(mockSubmissions.startedAt));
   }
 
   async deleteSubmission(id: number): Promise<boolean> {
-    const result = await db.delete(mockSubmissions).where(eq(mockSubmissions.id, id));
+    const result = await db
+      .delete(mockSubmissions)
+      .where(eq(mockSubmissions.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -430,10 +674,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserEnrollments(userId: number): Promise<Enrollment[]> {
-    return db.select().from(enrollments).where(eq(enrollments.userId, userId)).orderBy(desc(enrollments.createdAt));
+    return db
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.userId, userId))
+      .orderBy(desc(enrollments.createdAt));
   }
 
-  async getUserEnrollmentsWithCourses(userId: number): Promise<(Enrollment & { courseTitle: string; courseBanner: string | null })[]> {
+  async getUserEnrollmentsWithCourses(
+    userId: number,
+  ): Promise<
+    (Enrollment & { courseTitle: string; courseBanner: string | null })[]
+  > {
     const rows = await db
       .select({
         id: enrollments.id,
@@ -448,26 +700,52 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(courses, eq(courses.id, enrollments.courseId))
       .where(eq(enrollments.userId, userId))
       .orderBy(desc(enrollments.createdAt));
-    return rows.map((r) => ({ ...r, courseTitle: r.courseTitle ?? "", courseBanner: r.courseBanner ?? null }));
+    return rows.map((r) => ({
+      ...r,
+      courseTitle: r.courseTitle ?? "",
+      courseBanner: r.courseBanner ?? null,
+    }));
   }
 
-  async getEnrollment(userId: number, courseId: number): Promise<Enrollment | undefined> {
-    const [enrollment] = await db.select().from(enrollments).where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+  async getEnrollment(
+    userId: number,
+    courseId: number,
+  ): Promise<Enrollment | undefined> {
+    const [enrollment] = await db
+      .select()
+      .from(enrollments)
+      .where(
+        and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)),
+      );
     return enrollment;
   }
 
-  async updateEnrollment(id: number, data: Partial<Enrollment>): Promise<Enrollment | undefined> {
-    const [updated] = await db.update(enrollments).set(data).where(eq(enrollments.id, id)).returning();
+  async updateEnrollment(
+    id: number,
+    data: Partial<Enrollment>,
+  ): Promise<Enrollment | undefined> {
+    const [updated] = await db
+      .update(enrollments)
+      .set(data)
+      .where(eq(enrollments.id, id))
+      .returning();
     return updated;
   }
 
   async deleteEnrollment(id: number): Promise<boolean> {
-    const [deleted] = await db.delete(enrollments).where(eq(enrollments.id, id)).returning();
+    const [deleted] = await db
+      .delete(enrollments)
+      .where(eq(enrollments.id, id))
+      .returning();
     return !!deleted;
   }
 
   async getEnrollmentsByCourseId(courseId: number): Promise<Enrollment[]> {
-    return db.select().from(enrollments).where(eq(enrollments.courseId, courseId)).orderBy(desc(enrollments.createdAt));
+    return db
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.courseId, courseId))
+      .orderBy(desc(enrollments.createdAt));
   }
 
   async getAllEnrollments(): Promise<Enrollment[]> {
@@ -475,22 +753,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSetting(key: string): Promise<SiteSetting | undefined> {
-    const [setting] = await db.select().from(siteSettings).where(eq(siteSettings.key, key));
+    const [setting] = await db
+      .select()
+      .from(siteSettings)
+      .where(eq(siteSettings.key, key));
     return setting;
   }
 
   async setSetting(key: string, value: any): Promise<SiteSetting> {
     const existing = await this.getSetting(key);
     if (existing) {
-      const [updated] = await db.update(siteSettings).set({ value }).where(eq(siteSettings.key, key)).returning();
+      const [updated] = await db
+        .update(siteSettings)
+        .set({ value })
+        .where(eq(siteSettings.key, key))
+        .returning();
       return updated;
     }
-    const [setting] = await db.insert(siteSettings).values({ key, value }).returning();
+    const [setting] = await db
+      .insert(siteSettings)
+      .values({ key, value })
+      .returning();
     return setting;
   }
 
   async getStats(): Promise<Record<string, number>> {
-    const [[userCount], [courseCount], [testCount], [classCount], [resourceCount], [noticeCount]] = await Promise.all([
+    const [
+      [userCount],
+      [courseCount],
+      [testCount],
+      [classCount],
+      [resourceCount],
+      [noticeCount],
+    ] = await Promise.all([
       db.select({ count: count() }).from(users),
       db.select({ count: count() }).from(courses),
       db.select({ count: count() }).from(mockTests),
