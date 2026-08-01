@@ -116,6 +116,7 @@ export const mockTests = pgTable("mock_tests", {
   questions: jsonb("questions").notNull(),
   access: text("access").notNull().default("all"),
   isVisible: boolean("is_visible").notNull().default(true),
+  order: integer("order").notNull().default(0),
   courseId: integer("course_id"),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -147,7 +148,9 @@ export const mockSubmissions = pgTable("mock_submissions", {
   submittedAt: timestamp("submitted_at"),
 });
 
-export const insertMockSubmissionSchema = createInsertSchema(mockSubmissions).omit({
+export const insertMockSubmissionSchema = createInsertSchema(
+  mockSubmissions,
+).omit({
   id: true,
   startedAt: true,
 });
@@ -291,20 +294,38 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const mockTestsRelations = relations(mockTests, ({ one, many }) => ({
   submissions: many(mockSubmissions),
-  course: one(courses, { fields: [mockTests.courseId], references: [courses.id] }),
+  course: one(courses, {
+    fields: [mockTests.courseId],
+    references: [courses.id],
+  }),
 }));
 
-export const mockSubmissionsRelations = relations(mockSubmissions, ({ one }) => ({
-  user: one(users, { fields: [mockSubmissions.userId], references: [users.id] }),
-  mockTest: one(mockTests, { fields: [mockSubmissions.mockTestId], references: [mockTests.id] }),
-}));
+export const mockSubmissionsRelations = relations(
+  mockSubmissions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [mockSubmissions.userId],
+      references: [users.id],
+    }),
+    mockTest: one(mockTests, {
+      fields: [mockSubmissions.mockTestId],
+      references: [mockTests.id],
+    }),
+  }),
+);
 
 export const classesRelations = relations(classes, ({ one }) => ({
-  course: one(courses, { fields: [classes.courseId], references: [courses.id] }),
+  course: one(courses, {
+    fields: [classes.courseId],
+    references: [courses.id],
+  }),
 }));
 
 export const resourcesRelations = relations(resources, ({ one }) => ({
-  course: one(courses, { fields: [resources.courseId], references: [courses.id] }),
+  course: one(courses, {
+    fields: [resources.courseId],
+    references: [courses.id],
+  }),
 }));
 
 export const coursesRelations = relations(courses, ({ many }) => ({
@@ -316,7 +337,10 @@ export const coursesRelations = relations(courses, ({ many }) => ({
 
 export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
   user: one(users, { fields: [enrollments.userId], references: [users.id] }),
-  course: one(courses, { fields: [enrollments.courseId], references: [courses.id] }),
+  course: one(courses, {
+    fields: [enrollments.courseId],
+    references: [courses.id],
+  }),
 }));
 
 // ============ QUESTION TYPE ============
@@ -345,12 +369,34 @@ export const BANGLADESH_BOARDS = [
   "Technical",
 ] as const;
 
-export const HSC_GROUPS = ["Business Studies", "Science", "Humanities"] as const;
+export const HSC_GROUPS = [
+  "Business Studies",
+  "Science",
+  "Humanities",
+] as const;
 
-export const MOCK_TAGS = ["CU Mock", "English", "Analytical Skill", "Problem Solving"] as const;
-export const CLASS_TAGS = ["English", "Analytical Skill", "Problem Solving"] as const;
-export const RESOURCE_TAGS = ["CU QB", "English", "Analytical Skill", "Problem Solving"] as const;
-export const NOTICE_TAGS = ["Admission", "CU Notice", "Crack-CU Notice"] as const;
+export const MOCK_TAGS = [
+  "CU Mock",
+  "English",
+  "Analytical Skill",
+  "Problem Solving",
+] as const;
+export const CLASS_TAGS = [
+  "English",
+  "Analytical Skill",
+  "Problem Solving",
+] as const;
+export const RESOURCE_TAGS = [
+  "CU QB",
+  "English",
+  "Analytical Skill",
+  "Problem Solving",
+] as const;
+export const NOTICE_TAGS = [
+  "Admission",
+  "CU Notice",
+  "Crack-CU Notice",
+] as const;
 
 export const ACCESS_LEVELS = ["all", "signin", "paid"] as const;
 export const USER_ROLES = ["student", "mentor", "moderator", "admin"] as const;

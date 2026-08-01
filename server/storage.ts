@@ -59,6 +59,7 @@ export interface IStorage {
 
   getLatestMockTests(limit: number): Promise<MockTest[]>;
   getAllMockTests(): Promise<MockTest[]>;
+  reorderMockTests(updates: { id: number; order: number }[]): Promise<void>;
   getMockTest(id: number): Promise<MockTest | undefined>;
   createMockTest(data: InsertMockTest): Promise<MockTest>;
   getMockTestsByCourseId(courseId: number): Promise<MockTest[]>;
@@ -284,11 +285,22 @@ export class DatabaseStorage implements IStorage {
           lte(mockTests.publishTime, visibleCutoff),
         ),
       )
-      .orderBy(desc(mockTests.publishTime));
+      .orderBy(mockTests.order, mockTests.publishTime);
   }
 
   async getAllMockTests(): Promise<MockTest[]> {
-    return db.select().from(mockTests).orderBy(desc(mockTests.createdAt));
+    return db.select().from(mockTests).orderBy(mockTests.tag, mockTests.order);
+  }
+
+  async reorderMockTests(
+    updates: { id: number; order: number }[],
+  ): Promise<void> {
+    for (const u of updates) {
+      await db
+        .update(mockTests)
+        .set({ order: u.order })
+        .where(eq(mockTests.id, u.id));
+    }
   }
 
   async getMockTest(id: number): Promise<MockTest | undefined> {

@@ -21,14 +21,15 @@ const isValidUrl = (url: string) => {
   }
 };
 
-const supabase = (supabaseUrl && isValidUrl(supabaseUrl) && supabaseServiceKey) 
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : null;
+const supabase =
+  supabaseUrl && isValidUrl(supabaseUrl) && supabaseServiceKey
+    ? createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+    : null;
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -342,7 +343,10 @@ export async function registerRoutes(
 
       let isEnrolled = false;
       if (req.session.userId) {
-        const enrollment = await storage.getEnrollment(req.session.userId, courseId);
+        const enrollment = await storage.getEnrollment(
+          req.session.userId,
+          courseId,
+        );
         isEnrolled = enrollment?.status === "approved";
       }
 
@@ -362,7 +366,10 @@ export async function registerRoutes(
 
       let isEnrolled = false;
       if (req.session.userId) {
-        const enrollment = await storage.getEnrollment(req.session.userId, courseId);
+        const enrollment = await storage.getEnrollment(
+          req.session.userId,
+          courseId,
+        );
         isEnrolled = enrollment?.status === "approved";
       }
 
@@ -383,7 +390,10 @@ export async function registerRoutes(
 
       let isEnrolled = false;
       if (req.session.userId) {
-        const enrollment = await storage.getEnrollment(req.session.userId, courseId);
+        const enrollment = await storage.getEnrollment(
+          req.session.userId,
+          courseId,
+        );
         isEnrolled = enrollment?.status === "approved";
       }
 
@@ -405,13 +415,18 @@ export async function registerRoutes(
     const offset = parseInt(req.query.offset as string) || 0;
     const tag = req.query.tag as string;
     const freeOnly = req.query.free === "true";
-    const { items, total } = await storage.getLatestClasses(limit, offset, tag, freeOnly);
+    const { items, total } = await storage.getLatestClasses(
+      limit,
+      offset,
+      tag,
+      freeOnly,
+    );
     res.json({
       items,
       total,
       limit,
       offset,
-      hasMore: offset + items.length < total
+      hasMore: offset + items.length < total,
     });
   });
 
@@ -571,12 +586,17 @@ export async function registerRoutes(
         return res.status(400).json({ message: "All fields are required" });
       }
       if (newPassword.length < 6) {
-        return res.status(400).json({ message: "New password must be at least 6 characters" });
+        return res
+          .status(400)
+          .json({ message: "New password must be at least 6 characters" });
       }
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "User not found" });
       const valid = await bcrypt.compare(currentPassword, user.password);
-      if (!valid) return res.status(400).json({ message: "Current password is incorrect" });
+      if (!valid)
+        return res
+          .status(400)
+          .json({ message: "Current password is incorrect" });
       const hashed = await bcrypt.hash(newPassword, 10);
       await storage.updateUser(userId, { password: hashed });
       res.json({ message: "Password changed successfully" });
@@ -586,7 +606,9 @@ export async function registerRoutes(
   });
 
   app.get("/api/my-enrollments", requireAuth, async (req, res) => {
-    const enriched = await storage.getUserEnrollmentsWithCourses(req.session.userId!);
+    const enriched = await storage.getUserEnrollmentsWithCourses(
+      req.session.userId!,
+    );
     res.json(enriched);
   });
 
@@ -615,12 +637,15 @@ export async function registerRoutes(
           message: "Enrollment request already pending",
         });
       }
-      
+
       const autoApprove = user?.isPremium === true;
       const enrollStatus = autoApprove ? "approved" : "pending";
-      
+
       let enrollment;
-      if (existing && (existing.status === "declined" || existing.status === "restricted")) {
+      if (
+        existing &&
+        (existing.status === "declined" || existing.status === "restricted")
+      ) {
         enrollment = await storage.updateEnrollment(existing.id, {
           status: enrollStatus,
         });
@@ -831,7 +856,10 @@ export async function registerRoutes(
         isSubmitted: true,
         submittedAt: new Date(),
       };
-      const existingDraft = await storage.getInProgressSubmission(userId, mockTestId);
+      const existingDraft = await storage.getInProgressSubmission(
+        userId,
+        mockTestId,
+      );
       const submission = existingDraft
         ? await storage.updateSubmission(existingDraft.id, submissionData)
         : await storage.createSubmission(submissionData);
@@ -892,26 +920,42 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/mock-tests/:id/save-progress", requireAuth, async (req, res) => {
-    try {
-      const mockTestId = parseInt(req.params.id);
-      const userId = req.session.userId!;
-      const { answers } = req.body;
-      const existing = await storage.getInProgressSubmission(userId, mockTestId);
-      if (existing) {
-        const updated = await storage.updateSubmission(existing.id, { answers: answers || {} });
-        return res.json(updated);
+  app.post(
+    "/api/mock-tests/:id/save-progress",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const mockTestId = parseInt(req.params.id);
+        const userId = req.session.userId!;
+        const { answers } = req.body;
+        const existing = await storage.getInProgressSubmission(
+          userId,
+          mockTestId,
+        );
+        if (existing) {
+          const updated = await storage.updateSubmission(existing.id, {
+            answers: answers || {},
+          });
+          return res.json(updated);
+        }
+        const created = await storage.createSubmission({
+          mockTestId,
+          userId,
+          answers: answers || {},
+          isSubmitted: false,
+        });
+        res.json(created);
+      } catch (error: any) {
+        res.status(500).json({ message: error.message });
       }
-      const created = await storage.createSubmission({ mockTestId, userId, answers: answers || {}, isSubmitted: false });
-      res.json(created);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+    },
+  );
 
   app.get("/api/my-in-progress", requireAuth, async (req, res) => {
     try {
-      const drafts = await storage.getInProgressSubmissions(req.session.userId!);
+      const drafts = await storage.getInProgressSubmissions(
+        req.session.userId!,
+      );
       res.json(drafts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -924,14 +968,14 @@ export async function registerRoutes(
       const userId = req.session.userId!;
       const sub = await storage.getSubmission(subId);
       if (!sub) return res.status(404).json({ message: "Not found" });
-      if (sub.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+      if (sub.userId !== userId)
+        return res.status(403).json({ message: "Forbidden" });
       await storage.deleteSubmission(subId);
       res.json({ ok: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
-
 
   // ======= ADMIN ROUTES =======
   app.get("/api/admin/stats", requireAdmin, async (_req, res) => {
@@ -1103,15 +1147,19 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/users/:userId/enrollments", requireAdmin, async (req, res) => {
-    try {
-      const userId = parseInt(req.params.userId);
-      const enrollments = await storage.getUserEnrollmentsWithCourses(userId);
-      res.json(enrollments);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  app.get(
+    "/api/admin/users/:userId/enrollments",
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const userId = parseInt(req.params.userId);
+        const enrollments = await storage.getUserEnrollmentsWithCourses(userId);
+        res.json(enrollments);
+      } catch (error: any) {
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
 
   app.get("/api/admin/enrollments", requireAdmin, async (req, res) => {
     try {
@@ -1148,7 +1196,8 @@ export async function registerRoutes(
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteEnrollment(id);
-      if (!deleted) return res.status(404).json({ message: "Enrollment not found" });
+      if (!deleted)
+        return res.status(404).json({ message: "Enrollment not found" });
       res.json({ message: "Enrollment dismissed" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1162,7 +1211,9 @@ export async function registerRoutes(
       if (!["approved", "declined", "restricted"].includes(status)) {
         return res
           .status(400)
-          .json({ message: "Status must be approved, declined, or restricted" });
+          .json({
+            message: "Status must be approved, declined, or restricted",
+          });
       }
       const updated = await storage.updateEnrollment(id, { status });
       if (!updated)
@@ -1172,7 +1223,7 @@ export async function registerRoutes(
       try {
         const studentUser = await storage.getUser(updated.userId);
         const enrolledCourse = await storage.getCourse(updated.courseId);
-        
+
         if (studentUser && enrolledCourse) {
           const isApproved = status === "approved";
           await transporter.sendMail({
@@ -1192,7 +1243,9 @@ export async function registerRoutes(
                 <p>Hi <strong>${studentUser.fullName}</strong>,</p>
                 <p>Your enrollment request for <strong>${enrolledCourse.title}</strong> has been <strong>${status}</strong>.</p>
                 
-                ${isApproved ? `
+                ${
+                  isApproved
+                    ? `
                 <div style="background: #f0fdf4; border-left: 4px solid #059669; padding: 15px; margin: 20px 0;">
                   <p style="margin: 0; color: #166534; font-weight: bold;">Congratulations!</p>
                   <p style="margin: 5px 0;">You now have full access to the course materials. You can find it in your dashboard under "My Enrollments".</p>
@@ -1200,7 +1253,8 @@ export async function registerRoutes(
                 <div style="text-align: center; margin: 25px 0;">
                   <a href="${process.env.APP_URL || "https://crackcu.info"}/dashboard" style="background-color: #eb202a; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
                 </div>
-                ` : `
+                `
+                    : `
                 <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
                   <p style="margin: 0; color: #991b1b; font-weight: bold;">Enrollment Declined</p>
                   <p style="margin: 5px 0;">Unfortunately, your enrollment request was not approved at this time. This usually happens if payment verification fails.</p>
@@ -1209,7 +1263,8 @@ export async function registerRoutes(
                 <div style="text-align: center; margin: 25px 0;">
                   <a href="https://wa.me/8801522132809" style="background-color: #059669; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Contact on WhatsApp</a>
                 </div>
-                `}
+                `
+                }
                 
                 <br/>
                 <p>Regards,<br/><strong>Crack-CU Team</strong></p>
@@ -1348,6 +1403,21 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/admin/mock-tests/reorder", requireAdmin, async (req, res) => {
+    try {
+      const { updates } = req.body as {
+        updates: { id: number; order: number }[];
+      };
+      if (!Array.isArray(updates)) {
+        return res.status(400).json({ message: "updates must be an array" });
+      }
+      await storage.reorderMockTests(updates);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.patch("/api/admin/mock-tests/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -1365,7 +1435,9 @@ export async function registerRoutes(
       const data: Record<string, any> = {};
       if (title !== undefined) data.title = title;
       if (tag !== undefined) data.tag = tag;
-      if (courseId !== undefined) data.courseId = courseId === "" || courseId === null ? null : Number(courseId);
+      if (courseId !== undefined)
+        data.courseId =
+          courseId === "" || courseId === null ? null : Number(courseId);
       if (publishTime) {
         const parsed = parseBDTime(publishTime);
         if (!parsed)
@@ -1492,7 +1564,9 @@ export async function registerRoutes(
 
   app.patch("/api/admin/classes/reorder", requireAdmin, async (req, res) => {
     try {
-      const { updates } = req.body as { updates: { id: number; order: number }[] };
+      const { updates } = req.body as {
+        updates: { id: number; order: number }[];
+      };
       if (!Array.isArray(updates)) {
         return res.status(400).json({ message: "updates must be an array" });
       }
@@ -1525,7 +1599,9 @@ export async function registerRoutes(
       if (thumbnail !== undefined) data.thumbnail = thumbnail || null;
       if (access !== undefined) data.access = access;
       if (isVisible !== undefined) data.isVisible = isVisible;
-      if (courseId !== undefined) data.courseId = courseId === "" || courseId === null ? null : Number(courseId);
+      if (courseId !== undefined)
+        data.courseId =
+          courseId === "" || courseId === null ? null : Number(courseId);
       if (publishTime) {
         const parsed = parseBDTime(publishTime);
         if (!parsed)
@@ -1719,50 +1795,63 @@ export async function registerRoutes(
   });
 
   // ======= UPLOADS =======
-  app.post("/api/uploads/request-url", requireAdmin, upload.single("file"), async (req, res) => {
-    try {
-      if (!supabase) {
-        return res.status(500).json({ message: "Supabase storage not configured. Please check SUPABASE_URL_REST and SUPABASE_ANON_KEY." });
+  app.post(
+    "/api/uploads/request-url",
+    requireAdmin,
+    upload.single("file"),
+    async (req, res) => {
+      try {
+        if (!supabase) {
+          return res
+            .status(500)
+            .json({
+              message:
+                "Supabase storage not configured. Please check SUPABASE_URL_REST and SUPABASE_ANON_KEY.",
+            });
+        }
+
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        const file = req.file;
+        const bucketName = process.env.SUPABASE_BUCKET || "Uploads";
+        const fileName = `${Date.now()}-${file.originalname}`;
+
+        const { data: buckets, error: bucketsError } =
+          await supabase.storage.listBuckets();
+        if (bucketsError) {
+          console.error("Error listing buckets:", bucketsError);
+          throw bucketsError;
+        }
+
+        const bucketExists = buckets.some((b) => b.name === bucketName);
+        if (!bucketExists) {
+          console.log(
+            `Bucket "${bucketName}" not found. Attempting to use it anyway (it might be newly created).`,
+          );
+        }
+
+        const { data, error } = await supabase.storage
+          .from(bucketName)
+          .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          });
+
+        if (error) throw error;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from(bucketName).getPublicUrl(fileName);
+
+        res.json({ objectPath: publicUrl });
+      } catch (error: any) {
+        console.error("Upload error:", error);
+        res.status(500).json({ message: error.message || "Upload failed" });
       }
-
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-
-      const file = req.file;
-      const bucketName = process.env.SUPABASE_BUCKET || "Uploads";
-      const fileName = `${Date.now()}-${file.originalname}`;
-      
-    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-    if (bucketsError) {
-      console.error("Error listing buckets:", bucketsError);
-      throw bucketsError;
-    }
-    
-    const bucketExists = buckets.some(b => b.name === bucketName);
-    if (!bucketExists) {
-      console.log(`Bucket "${bucketName}" not found. Attempting to use it anyway (it might be newly created).`);
-    }
-
-    const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(fileName, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false
-        });
-
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(fileName);
-
-      res.json({ objectPath: publicUrl });
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      res.status(500).json({ message: error.message || "Upload failed" });
-    }
-  });
+    },
+  );
 
   return httpServer;
 }

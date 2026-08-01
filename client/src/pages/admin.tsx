@@ -1949,6 +1949,8 @@ function MockTestsTab() {
     "/api/admin/mock-tests",
     ["/api/mock-tests"],
   );
+  const [reorderMode, setReorderMode] = useState(false);
+  const [courseFilter, setCourseFilter] = useState<string>("__all__");
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1982,61 +1984,268 @@ function MockTestsTab() {
 
   return (
     <div>
-      {!isCreating && !editingTest ? (
-        <Button
-          size="sm"
-          onClick={() => setIsCreating(true)}
-          data-testid="button-create-mock"
-        >
-          <Plus className="h-3.5 w-3.5 mr-1" /> Create Mock Test
-        </Button>
-      ) : isCreating ? (
-        <MockTestForm
-          title="Create Mock Test"
-          onSubmit={(data) => createMutation.mutate(data)}
-          isPending={createMutation.isPending}
-          onCancel={() => setIsCreating(false)}
-          courses={courseList}
-        />
-      ) : editingTest ? (
-        <MockTestForm
-          title="Edit Mock Test"
-          initialData={editingTest}
-          onSubmit={(data) =>
-            updateMutation.mutate({ id: editingTest.id, data })
-          }
-          isPending={updateMutation.isPending}
-          onCancel={() => setEditingTest(null)}
-          courses={courseList}
-        />
-      ) : null}
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        {!isCreating && !editingTest ? (
+          <Button
+            size="sm"
+            onClick={() => setIsCreating(true)}
+            data-testid="button-create-mock"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" /> Create Mock Test
+          </Button>
+        ) : null}
+        {!isCreating && !editingTest ? (
+          <Button
+            size="sm"
+            variant={reorderMode ? "default" : "outline"}
+            onClick={() => setReorderMode(!reorderMode)}
+            data-testid="button-toggle-reorder-mock"
+          >
+            <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
+            {reorderMode ? "Done Reordering" : "Reorder Mock Tests"}
+          </Button>
+        ) : null}
+        {!isCreating && !editingTest && !reorderMode && (
+          <Select value={courseFilter} onValueChange={setCourseFilter}>
+            <SelectTrigger
+              className="w-56 h-8 text-xs"
+              data-testid="select-mock-course-filter"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Mock Tests</SelectItem>
+              <SelectItem value="__standalone__">
+                Standalone (no course)
+              </SelectItem>
+              {courseList?.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
-      {isLoading ? (
-        <Skeleton className="h-48 w-full mt-4" />
+      {reorderMode ? (
+        <MockTestReorderPanel
+          testList={testList || []}
+          courseList={courseList || []}
+          isLoading={isLoading}
+        />
       ) : (
-        <div className="space-y-2 mt-4">
-          {testList?.map((t) => (
-            <MockTestCard
-              key={t.id}
-              test={t}
-              onEdit={() => {
-                setEditingTest(t);
-                setIsCreating(false);
-              }}
-              onDelete={() => deleteMutation.mutate(t.id)}
-              courseName={
-                t.courseId
-                  ? courseList?.find((c) => c.id === t.courseId)?.title
-                  : undefined
-              }
+        <>
+          {isCreating ? (
+            <MockTestForm
+              title="Create Mock Test"
+              onSubmit={(data) => createMutation.mutate(data)}
+              isPending={createMutation.isPending}
+              onCancel={() => setIsCreating(false)}
+              courses={courseList}
             />
-          ))}
-          {(!testList || testList.length === 0) && (
-            <p className="text-sm text-muted-foreground mt-4">
-              No mock tests yet.
-            </p>
+          ) : editingTest ? (
+            <MockTestForm
+              title="Edit Mock Test"
+              initialData={editingTest}
+              onSubmit={(data) =>
+                updateMutation.mutate({ id: editingTest.id, data })
+              }
+              isPending={updateMutation.isPending}
+              onCancel={() => setEditingTest(null)}
+              courses={courseList}
+            />
+          ) : null}
+
+          {isLoading ? (
+            <Skeleton className="h-48 w-full mt-4" />
+          ) : (
+            <div className="space-y-2 mt-4">
+              {testList
+                ?.filter((t) => {
+                  if (courseFilter === "__all__") return true;
+                  if (courseFilter === "__standalone__") return !t.courseId;
+                  return String(t.courseId) === courseFilter;
+                })
+                .map((t) => (
+                  <MockTestCard
+                    key={t.id}
+                    test={t}
+                    onEdit={() => {
+                      setEditingTest(t);
+                      setIsCreating(false);
+                    }}
+                    onDelete={() => deleteMutation.mutate(t.id)}
+                    courseName={
+                      t.courseId
+                        ? courseList?.find((c) => c.id === t.courseId)?.title
+                        : undefined
+                    }
+                  />
+                ))}
+              {(!testList ||
+                testList.filter((t) => {
+                  if (courseFilter === "__all__") return true;
+                  if (courseFilter === "__standalone__") return !t.courseId;
+                  return String(t.courseId) === courseFilter;
+                }).length === 0) && (
+                <p className="text-sm text-muted-foreground mt-4">
+                  No mock tests match this filter.
+                </p>
+              )}
+            </div>
           )}
-        </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function MockTestReorderPanel({
+  testList,
+  courseList,
+  isLoading,
+}: {
+  testList: MockTest[];
+  courseList: Course[];
+  isLoading: boolean;
+}) {
+  const { toast } = useToast();
+  const [scope, setScope] = useState<string>("__standalone__");
+  const [groups, setGroups] = useState<Record<string, MockTest[]>>({});
+  const [dragInfo, setDragInfo] = useState<{
+    tag: string;
+    index: number;
+  } | null>(null);
+
+  const scopedList = testList.filter((t) =>
+    scope === "__standalone__" ? !t.courseId : String(t.courseId) === scope,
+  );
+
+  useEffect(() => {
+    if (isLoading) return;
+    const byTag: Record<string, MockTest[]> = {};
+    for (const tag of MOCK_TAGS) {
+      byTag[tag] = scopedList
+        .filter((t) => t.tag === tag)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id - b.id);
+    }
+    setGroups(byTag);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, scope, testList]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (updates: { id: number; order: number }[]) => {
+      await apiRequest("PATCH", "/api/admin/mock-tests/reorder", { updates });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/mock-tests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mock-tests"] });
+      toast({ title: "Order saved" });
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
+    },
+  });
+
+  function handleDrop(tag: string, dropIndex: number) {
+    if (!dragInfo || dragInfo.tag !== tag) return;
+    setGroups((prev) => {
+      const list = [...prev[tag]];
+      const [moved] = list.splice(dragInfo.index, 1);
+      list.splice(dropIndex, 0, moved);
+      return { ...prev, [tag]: list };
+    });
+    setDragInfo(null);
+  }
+
+  function saveTagOrder(tag: string) {
+    const list = groups[tag] || [];
+    const updates = list.map((t, i) => ({ id: t.id, order: i }));
+    saveMutation.mutate(updates);
+  }
+
+  if (isLoading) return <Skeleton className="h-48 w-full mt-4" />;
+
+  return (
+    <div className="space-y-6 mt-4">
+      <div>
+        <Label className="text-xs">Reordering</Label>
+        <Select value={scope} onValueChange={setScope}>
+          <SelectTrigger
+            className="w-full sm:w-72"
+            data-testid="select-reorder-scope-mock"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__standalone__">
+              Standalone Mock Tests (no course)
+            </SelectItem>
+            {courseList.map((c) => (
+              <SelectItem key={c.id} value={String(c.id)}>
+                {c.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground mt-1">
+          Course mock tests and standalone mock tests are reordered separately,
+          so pick which one you're working on. Save before switching, unsaved
+          drags reset when you change this.
+        </p>
+      </div>
+
+      {MOCK_TAGS.map((tag) => {
+        const list = groups[tag] || [];
+        if (list.length === 0) return null;
+        return (
+          <div
+            key={tag}
+            data-testid={`reorder-group-mock-${tag.replace(/\s+/g, "-").toLowerCase()}`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold">
+                {tag} ({list.length})
+              </h3>
+              <Button
+                size="sm"
+                onClick={() => saveTagOrder(tag)}
+                disabled={saveMutation.isPending}
+                data-testid={`button-save-order-mock-${tag.replace(/\s+/g, "-").toLowerCase()}`}
+              >
+                {saveMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : null}
+                Save Order
+              </Button>
+            </div>
+            <div className="space-y-1.5">
+              {list.map((t, index) => (
+                <div
+                  key={t.id}
+                  draggable
+                  onDragStart={() => setDragInfo({ tag, index })}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop(tag, index)}
+                  className="flex items-center gap-3 p-2.5 border rounded-md bg-card cursor-move hover:border-primary/50 transition-colors"
+                  data-testid={`reorder-item-mock-${t.id}`}
+                >
+                  <span className="text-xs text-muted-foreground w-6 text-center shrink-0">
+                    {index + 1}
+                  </span>
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-sm truncate">{t.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {Object.values(groups).every((l) => l.length === 0) && (
+        <p className="text-sm text-muted-foreground">
+          No mock tests in this scope yet.
+        </p>
       )}
     </div>
   );
