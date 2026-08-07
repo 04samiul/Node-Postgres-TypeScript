@@ -9,7 +9,15 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Clock, Send, AlertTriangle, CheckCircle2, XCircle, Play, RotateCcw } from "lucide-react";
+import {
+  Clock,
+  Send,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Play,
+  RotateCcw,
+} from "lucide-react";
 import type { MockTest, MockSubmission } from "@shared/schema";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
@@ -35,7 +43,12 @@ const SECTION_COLORS: Record<string, string> = {
 type ExamMode = "checking" | "prompt" | "exam" | "submitted";
 
 export default function MockExamPage() {
-  useSEO({ title: "Mock Exam", description: "Take your Chittagong University admission mock test. Timed exam with auto-grading.", noIndex: true });
+  useSEO({
+    title: "Mock Exam",
+    description:
+      "Take your Chittagong University admission mock test. Timed exam with auto-grading.",
+    noIndex: true,
+  });
 
   const [, params] = useRoute("/mock-tests/:id");
   const id = params?.id;
@@ -50,20 +63,27 @@ export default function MockExamPage() {
   const draftIdRef = useRef<number | null>(null);
   const lastSavedRef = useRef<string>("");
 
-  const { data: test, isLoading, error } = useQuery<MockTest>({
+  const {
+    data: test,
+    isLoading,
+    error,
+  } = useQuery<MockTest>({
     queryKey: ["/api/mock-tests", id],
     enabled: !!id && !!user,
   });
 
-  const { data: draft, isLoading: draftLoading } = useQuery<MockSubmission | null>({
-    queryKey: ["/api/mock-tests", id, "in-progress"],
-    queryFn: async () => {
-      const res = await fetch(`/api/mock-tests/${id}/in-progress`, { credentials: "include" });
-      if (!res.ok) return null;
-      return res.json();
-    },
-    enabled: !!id && !!user && !!test,
-  });
+  const { data: draft, isLoading: draftLoading } =
+    useQuery<MockSubmission | null>({
+      queryKey: ["/api/mock-tests", id, "in-progress"],
+      queryFn: async () => {
+        const res = await fetch(`/api/mock-tests/${id}/in-progress`, {
+          credentials: "include",
+        });
+        if (!res.ok) return null;
+        return res.json();
+      },
+      enabled: !!id && !!user && !!test,
+    });
 
   useEffect(() => {
     if (draftLoading || !test) return;
@@ -73,12 +93,22 @@ export default function MockExamPage() {
     } else {
       setTimeLeft(test.duration * 60);
       setMode("exam");
+      // Stamp startedAt the instant the exam actually begins, not on the
+      // first autosave. A fast student who finishes before any autosave
+      // fires would otherwise get a submission row created from scratch
+      // at submit time, making startedAt and submittedAt nearly identical.
+      saveProgressMutation.mutate({ answers: {} });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, draftLoading, test]);
 
   const saveProgressMutation = useMutation({
     mutationFn: async (data: { answers: Record<string, number> }) => {
-      const res = await apiRequest("POST", `/api/mock-tests/${id}/save-progress`, data);
+      const res = await apiRequest(
+        "POST",
+        `/api/mock-tests/${id}/save-progress`,
+        data,
+      );
       const json = await res.json();
       draftIdRef.current = json.id;
       return json;
@@ -87,13 +117,16 @@ export default function MockExamPage() {
 
   const timerKey = `mock_timer_${id}`;
 
-  const saveProgress = useCallback((currentAnswers: Record<string, number>, currentTime: number) => {
-    const key = JSON.stringify(currentAnswers);
-    if (key === lastSavedRef.current) return;
-    lastSavedRef.current = key;
-    localStorage.setItem(timerKey, String(currentTime));
-    saveProgressMutation.mutate({ answers: currentAnswers });
-  }, [timerKey]);
+  const saveProgress = useCallback(
+    (currentAnswers: Record<string, number>, currentTime: number) => {
+      const key = JSON.stringify(currentAnswers);
+      if (key === lastSavedRef.current) return;
+      lastSavedRef.current = key;
+      localStorage.setItem(timerKey, String(currentTime));
+      saveProgressMutation.mutate({ answers: currentAnswers });
+    },
+    [timerKey],
+  );
 
   useEffect(() => {
     if (mode !== "exam" || timeLeft === null) return;
@@ -117,7 +150,9 @@ export default function MockExamPage() {
     const handleUnload = () => {
       if (timeLeft !== null && timeLeft > 0) {
         localStorage.setItem(timerKey, String(timeLeft));
-        const blob = new Blob([JSON.stringify({ answers })], { type: "application/json" });
+        const blob = new Blob([JSON.stringify({ answers })], {
+          type: "application/json",
+        });
         navigator.sendBeacon(`/api/mock-tests/${id}/save-progress`, blob);
       }
     };
@@ -127,7 +162,11 @@ export default function MockExamPage() {
 
   const submitMutation = useMutation({
     mutationFn: async (data: { answers: Record<string, number> }) => {
-      const res = await apiRequest("POST", `/api/mock-tests/${id}/submit`, data);
+      const res = await apiRequest(
+        "POST",
+        `/api/mock-tests/${id}/submit`,
+        data,
+      );
       return res.json();
     },
     onSuccess: (data: MockSubmission) => {
@@ -182,7 +221,9 @@ export default function MockExamPage() {
     setAnswers({});
     setTimeLeft(test!.duration * 60);
     setMode("exam");
-    queryClient.invalidateQueries({ queryKey: ["/api/mock-tests", id, "in-progress"] });
+    queryClient.invalidateQueries({
+      queryKey: ["/api/mock-tests", id, "in-progress"],
+    });
   };
 
   const handleReExam = async () => {
@@ -193,7 +234,9 @@ export default function MockExamPage() {
     lastSavedRef.current = "";
     draftIdRef.current = null;
     setMode("exam");
-    queryClient.invalidateQueries({ queryKey: ["/api/mock-tests", id, "in-progress"] });
+    queryClient.invalidateQueries({
+      queryKey: ["/api/mock-tests", id, "in-progress"],
+    });
   };
 
   const formatTime = (seconds: number) => {
@@ -205,8 +248,12 @@ export default function MockExamPage() {
   if (!user) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <p className="text-muted-foreground mb-4">Please sign in to take mock tests.</p>
-        <Link href="/auth"><Button>Sign In</Button></Link>
+        <p className="text-muted-foreground mb-4">
+          Please sign in to take mock tests.
+        </p>
+        <Link href="/auth">
+          <Button>Sign In</Button>
+        </Link>
       </div>
     );
   }
@@ -224,19 +271,31 @@ export default function MockExamPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <AlertTriangle className="h-12 w-12 mx-auto text-destructive mb-3" />
-        <p className="text-muted-foreground mb-4">{(error as Error)?.message || "Mock test not found"}</p>
-        <Link href="/mock-tests"><Button variant="outline">Back to Mock Tests</Button></Link>
+        <p className="text-muted-foreground mb-4">
+          {(error as Error)?.message || "Mock test not found"}
+        </p>
+        <Link href="/mock-tests">
+          <Button variant="outline">Back to Mock Tests</Button>
+        </Link>
       </div>
     );
   }
 
   if (mode === "prompt" && draft) {
-    const savedAnswerCount = Object.keys((draft.answers as object) || {}).length;
+    const savedAnswerCount = Object.keys(
+      (draft.answers as object) || {},
+    ).length;
     const storedTimer = localStorage.getItem(`mock_timer_${id}`);
     const savedTime = storedTimer ? parseInt(storedTimer, 10) : null;
     return (
-      <div className="max-w-md mx-auto px-4 py-16" data-testid="page-exam-prompt">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+      <div
+        className="max-w-md mx-auto px-4 py-16"
+        data-testid="page-exam-prompt"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
           <Card>
             <CardHeader className="text-center">
               <div className="mx-auto mb-3">
@@ -245,7 +304,10 @@ export default function MockExamPage() {
               <CardTitle className="text-xl">Unfinished Exam Found</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-center">
-              <p className="text-muted-foreground">You have an unsubmitted attempt for <strong>{test.title}</strong>.</p>
+              <p className="text-muted-foreground">
+                You have an unsubmitted attempt for{" "}
+                <strong>{test.title}</strong>.
+              </p>
               <div className="flex justify-center gap-4 text-sm">
                 <div className="bg-muted rounded-lg px-4 py-2">
                   <p className="text-muted-foreground text-xs">Answered</p>
@@ -254,20 +316,39 @@ export default function MockExamPage() {
                 {savedTime !== null && savedTime !== undefined && (
                   <div className="bg-muted rounded-lg px-4 py-2">
                     <p className="text-muted-foreground text-xs">Time Left</p>
-                    <p className="font-bold text-lg font-mono">{formatTime(savedTime)}</p>
+                    <p className="font-bold text-lg font-mono">
+                      {formatTime(savedTime)}
+                    </p>
                   </div>
                 )}
               </div>
               <div className="flex flex-col gap-2 pt-2">
-                <Button onClick={handleResume} className="w-full gap-2" data-testid="button-resume-exam" disabled={deleteDraftMutation.isPending}>
+                <Button
+                  onClick={handleResume}
+                  className="w-full gap-2"
+                  data-testid="button-resume-exam"
+                  disabled={deleteDraftMutation.isPending}
+                >
                   <Play className="h-4 w-4" /> Resume Exam
                 </Button>
-                <Button variant="outline" onClick={handleRestart} className="w-full gap-2" data-testid="button-restart-exam" disabled={deleteDraftMutation.isPending}>
+                <Button
+                  variant="outline"
+                  onClick={handleRestart}
+                  className="w-full gap-2"
+                  data-testid="button-restart-exam"
+                  disabled={deleteDraftMutation.isPending}
+                >
                   <RotateCcw className="h-4 w-4" /> Start Fresh
                 </Button>
               </div>
               <Link href="/mock-tests">
-                <Button variant="ghost" size="sm" className="text-muted-foreground">Back to Mock Tests</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
+                >
+                  Back to Mock Tests
+                </Button>
               </Link>
             </CardContent>
           </Card>
@@ -278,8 +359,14 @@ export default function MockExamPage() {
 
   if (mode === "submitted" && result) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8" data-testid="page-mock-result">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+      <div
+        className="max-w-2xl mx-auto px-4 py-8"
+        data-testid="page-mock-result"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
           <Card>
             <CardHeader className="text-center">
               <div className="mx-auto mb-3">
@@ -290,42 +377,93 @@ export default function MockExamPage() {
                 )}
               </div>
               <CardTitle className="text-xl" data-testid="text-result-status">
-                {result.passed ? "Congratulations! You Passed!" : "Keep Trying!"}
+                {result.passed
+                  ? "Congratulations! You Passed!"
+                  : "Keep Trying!"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <h3 className="font-medium text-center">{test.title}</h3>
 
               <div className="grid grid-cols-2 gap-3">
-                <ResultCard label="English Passage" marks={result.engPMarks ?? 0} />
-                <ResultCard label="English Other" marks={result.engOMarks ?? 0} />
-                <ResultCard label="English Total" marks={(result.engPMarks ?? 0) + (result.engOMarks ?? 0)} pass={13} />
-                <ResultCard label="Analytical Skill" marks={result.asMarks ?? 0} pass={10} />
-                <ResultCard label="Problem Solving" marks={result.psMarks ?? 0} pass={10} />
+                <ResultCard
+                  label="English Passage"
+                  marks={result.engPMarks ?? 0}
+                />
+                <ResultCard
+                  label="English Other"
+                  marks={result.engOMarks ?? 0}
+                />
+                <ResultCard
+                  label="English Total"
+                  marks={(result.engPMarks ?? 0) + (result.engOMarks ?? 0)}
+                  pass={13}
+                />
+                <ResultCard
+                  label="Analytical Skill"
+                  marks={result.asMarks ?? 0}
+                  pass={10}
+                />
+                <ResultCard
+                  label="Problem Solving"
+                  marks={result.psMarks ?? 0}
+                  pass={10}
+                />
               </div>
 
               <div className="text-center space-y-1 pt-2">
-                <p className="text-sm text-muted-foreground">Total: <strong>{(result.totalMarks ?? 0).toFixed(2)}</strong></p>
+                <p className="text-sm text-muted-foreground">
+                  Total: <strong>{(result.totalMarks ?? 0).toFixed(2)}</strong>
+                </p>
                 {user?.isSecondTimer && (
-                  <p className="text-sm text-amber-600 dark:text-amber-400">2nd Timer Penalty: <strong>-3</strong></p>
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    2nd Timer Penalty: <strong>-3</strong>
+                  </p>
                 )}
-                <p className="text-lg font-bold">Net Marks: <span className={result.passed ? "text-green-600" : "text-destructive"}>{(result.netMarks ?? 0).toFixed(2)}</span></p>
+                <p className="text-lg font-bold">
+                  Net Marks:{" "}
+                  <span
+                    className={
+                      result.passed ? "text-green-600" : "text-destructive"
+                    }
+                  >
+                    {(result.netMarks ?? 0).toFixed(2)}
+                  </span>
+                </p>
                 <div className="flex items-center justify-center gap-2">
-                  <Badge variant="outline" className={user?.isSecondTimer ? "border-amber-500 text-amber-600 dark:text-amber-400" : ""} data-testid="badge-timer-status">
+                  <Badge
+                    variant="outline"
+                    className={
+                      user?.isSecondTimer
+                        ? "border-amber-500 text-amber-600 dark:text-amber-400"
+                        : ""
+                    }
+                    data-testid="badge-timer-status"
+                  >
                     {user?.isSecondTimer ? "2nd Timer" : "1st Timer"}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">(Pass mark: 40 overall, English 13, AS 10, PS 10)</p>
+                <p className="text-xs text-muted-foreground">
+                  (Pass mark: 40 overall, English 13, AS 10, PS 10)
+                </p>
               </div>
 
               <div className="flex justify-center gap-2 pt-4 flex-wrap">
                 <Link href="/mock-tests">
-                  <Button variant="outline" data-testid="button-back-to-mocks">Back to Mock Tests</Button>
+                  <Button variant="outline" data-testid="button-back-to-mocks">
+                    Back to Mock Tests
+                  </Button>
                 </Link>
                 <Link href="/dashboard">
-                  <Button variant="outline" data-testid="button-go-dashboard">Dashboard</Button>
+                  <Button variant="outline" data-testid="button-go-dashboard">
+                    Dashboard
+                  </Button>
                 </Link>
-                <Button onClick={handleReExam} data-testid="button-re-exam" className="gap-2">
+                <Button
+                  onClick={handleReExam}
+                  data-testid="button-re-exam"
+                  className="gap-2"
+                >
                   <RotateCcw className="h-4 w-4" /> Re-exam
                 </Button>
               </div>
@@ -336,7 +474,8 @@ export default function MockExamPage() {
     );
   }
 
-  const questions: Question[] = test && Array.isArray(test.questions) ? test.questions as Question[] : [];
+  const questions: Question[] =
+    test && Array.isArray(test.questions) ? (test.questions as Question[]) : [];
   const answeredCount = Object.keys(answers).length;
 
   return (
@@ -344,12 +483,22 @@ export default function MockExamPage() {
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur pb-3 border-b mb-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="min-w-0">
-            <h1 className="text-sm font-medium truncate" data-testid="text-exam-title">{test.title}</h1>
-            <p className="text-xs text-muted-foreground">{answeredCount}/{questions.length} answered</p>
+            <h1
+              className="text-sm font-medium truncate"
+              data-testid="text-exam-title"
+            >
+              {test.title}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {answeredCount}/{questions.length} answered
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {timeLeft !== null && (
-              <div className={`flex items-center gap-1 font-mono text-sm font-bold ${timeLeft < 300 ? "text-destructive" : ""}`} data-testid="text-timer">
+              <div
+                className={`flex items-center gap-1 font-mono text-sm font-bold ${timeLeft < 300 ? "text-destructive" : ""}`}
+                data-testid="text-timer"
+              >
                 <Clock className="h-4 w-4" />
                 {formatTime(timeLeft)}
               </div>
@@ -373,12 +522,22 @@ export default function MockExamPage() {
               <AlertTriangle className="h-10 w-10 mx-auto text-amber-500" />
               <p className="font-medium">Submit this exam?</p>
               <p className="text-sm text-muted-foreground">
-                You have answered {answeredCount} out of {questions.length} questions.
-                {questions.length - answeredCount > 0 && ` ${questions.length - answeredCount} unanswered.`}
+                You have answered {answeredCount} out of {questions.length}{" "}
+                questions.
+                {questions.length - answeredCount > 0 &&
+                  ` ${questions.length - answeredCount} unanswered.`}
               </p>
               <div className="flex justify-center gap-2">
-                <Button variant="outline" onClick={() => setShowConfirm(false)}>Cancel</Button>
-                <Button onClick={() => { setShowConfirm(false); handleSubmit(); }} disabled={submitMutation.isPending}>
+                <Button variant="outline" onClick={() => setShowConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowConfirm(false);
+                    handleSubmit();
+                  }}
+                  disabled={submitMutation.isPending}
+                >
                   Confirm Submit
                 </Button>
               </div>
@@ -392,7 +551,9 @@ export default function MockExamPage() {
           <Card key={q.id} data-testid={`card-question-${q.id}`}>
             <CardContent className="pt-4 space-y-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-muted-foreground">Q{idx + 1}.</span>
+                <span className="text-sm font-bold text-muted-foreground">
+                  Q{idx + 1}.
+                </span>
                 <Badge className={SECTION_COLORS[q.section] || ""}>
                   {q.section}
                 </Badge>
@@ -407,7 +568,13 @@ export default function MockExamPage() {
               )}
 
               {q.image && (
-                <img src={q.image} alt={`Question ${q.id} illustration`} className="max-w-full rounded-md max-h-64 object-contain" loading="lazy" data-testid={`img-question-${q.id}`} />
+                <img
+                  src={q.image}
+                  alt={`Question ${q.id} illustration`}
+                  className="max-w-full rounded-md max-h-64 object-contain"
+                  loading="lazy"
+                  data-testid={`img-question-${q.id}`}
+                />
               )}
 
               <p
@@ -438,9 +605,13 @@ export default function MockExamPage() {
                       }}
                       data-testid={`button-option-${q.id}-${oi}`}
                     >
-                      <span className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${
-                        selected ? "bg-blue-500 text-white border-blue-500" : "border-border"
-                      }`}>
+                      <span
+                        className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 ${
+                          selected
+                            ? "bg-blue-500 text-white border-blue-500"
+                            : "border-border"
+                        }`}
+                      >
                         {String.fromCharCode(65 + oi)}
                       </span>
                       <span
@@ -458,7 +629,9 @@ export default function MockExamPage() {
 
       <div className="sticky bottom-0 bg-background/95 backdrop-blur pt-3 border-t mt-4 pb-4">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">{answeredCount}/{questions.length} answered</p>
+          <p className="text-xs text-muted-foreground">
+            {answeredCount}/{questions.length} answered
+          </p>
           <Button
             size="sm"
             onClick={() => setShowConfirm(true)}
@@ -473,13 +646,23 @@ export default function MockExamPage() {
   );
 }
 
-function ResultCard({ label, marks, pass }: { label: string; marks: number; pass?: number }) {
+function ResultCard({
+  label,
+  marks,
+  pass,
+}: {
+  label: string;
+  marks: number;
+  pass?: number;
+}) {
   const passed = pass === undefined || marks >= pass;
   return (
     <Card>
       <CardContent className="pt-3 text-center">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`text-lg font-bold ${passed ? "" : "text-destructive"}`}>{marks.toFixed(2)}</p>
+        <p className={`text-lg font-bold ${passed ? "" : "text-destructive"}`}>
+          {marks.toFixed(2)}
+        </p>
         {pass !== undefined && (
           <p className="text-xs text-muted-foreground">Pass: {pass}</p>
         )}

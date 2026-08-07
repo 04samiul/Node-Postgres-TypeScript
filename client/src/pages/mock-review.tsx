@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { AlertTriangle, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, CheckCircle2, XCircle, ArrowLeft, Trophy } from "lucide-react";
 import type { MockSubmission } from "@shared/schema";
 import { Link } from "wouter";
 import { useSEO } from "@/hooks/use-seo";
@@ -121,6 +121,8 @@ export default function MockReviewPage() {
           </div>
         </div>
 
+        <MockReviewLeaderboardWidget mockTestId={mockTest.id} />
+
         <div className="space-y-4">
           {questions.map((q, idx) => {
             const studentAns = studentAnswers[String(q.id)];
@@ -228,5 +230,35 @@ export default function MockReviewPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+interface LeaderboardPreview {
+  totalParticipants: number;
+  yourRank: number | null;
+}
+
+function MockReviewLeaderboardWidget({ mockTestId }: { mockTestId: number }) {
+  const { data } = useQuery<LeaderboardPreview>({
+    queryKey: [`/api/mock-tests/${mockTestId}/leaderboard`],
+  });
+
+  if (!data || !data.yourRank) return null;
+
+  return (
+    <Link href={`/mock-tests/${mockTestId}/leaderboard`}>
+      <div
+        className="flex items-center justify-between gap-3 mb-6 p-3 rounded-lg border bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer"
+        data-testid="widget-leaderboard-rank"
+      >
+        <div className="flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-amber-500" />
+          <span className="text-sm">
+            You ranked <strong className="text-primary">#{data.yourRank}</strong> out of {data.totalParticipants}
+          </span>
+        </div>
+        <span className="text-xs text-muted-foreground">View leaderboard →</span>
+      </div>
+    </Link>
   );
 }

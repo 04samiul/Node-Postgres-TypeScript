@@ -24,6 +24,7 @@ const AdminDashboard = lazy(() => import("@/pages/admin"));
 const CourseDetailPage = lazy(() => import("@/pages/course-detail"));
 const MockExamPage = lazy(() => import("@/pages/mock-exam"));
 const MockReviewPage = lazy(() => import("@/pages/mock-review"));
+const MockLeaderboardPage = lazy(() => import("@/pages/mock-leaderboard"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 function ScrollToTop() {
@@ -50,8 +51,15 @@ function Router() {
         <Route path="/courses" component={CoursesPage} />
         <Route path="/courses/:id" component={CourseDetailPage} />
         <Route path="/mock-tests" component={MockTestsPage} />
+        <ProtectedRoute
+          path="/mock-tests/:id/leaderboard"
+          component={MockLeaderboardPage}
+        />
         <Route path="/mock-tests/:id" component={MockExamPage} />
-        <ProtectedRoute path="/mock-review/:submissionId" component={MockReviewPage} />
+        <ProtectedRoute
+          path="/mock-review/:submissionId"
+          component={MockReviewPage}
+        />
         <Route path="/classes" component={ClassesPage} />
         <Route path="/resources" component={ResourcesPage} />
         <Route path="/notices" component={NoticesPage} />
