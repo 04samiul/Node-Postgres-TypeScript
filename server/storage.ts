@@ -92,6 +92,16 @@ export interface IStorage {
   getSubmission(id: number): Promise<MockSubmission | undefined>;
   getUserSubmissions(userId: number): Promise<MockSubmission[]>;
   getSubmissionsByMockTestId(mockTestId: number): Promise<any[]>;
+  getMockTestLeaderboard(
+    mockTestId: number,
+  ): Promise<
+    {
+      userId: number;
+      fullName: string;
+      netMarks: number;
+      durationSeconds: number;
+    }[]
+  >;
   updateSubmission(
     id: number,
     data: Partial<MockSubmission>,
@@ -592,6 +602,96 @@ export class DatabaseStorage implements IStorage {
       .from(mockSubmissions)
       .where(eq(mockSubmissions.userId, userId))
       .orderBy(desc(mockSubmissions.startedAt));
+  }
+
+  async getMockTestLeaderboard(mockTestId: number): Promise<
+    {
+      userId: number;
+      fullName: string;
+      netMarks: number;
+      durationSeconds: number;
+    }[]
+  > {
+    const test = await this.getMockTest(mockTestId);
+    // Grace period covers real network/submit lag, not "took the test over lunch."
+    const GRACE_SECONDS = 90;
+    const allowedSeconds = test
+      ? test.duration * 60 + GRACE_SECONDS
+      : Number.MAX_SAFE_INTEGER;
+    // Nobody reads a question, picks an answer, and moves on in under ~3
+    // seconds honestly. A submission finishing faster than that floor has
+    // a broken or missing startedAt, not a genuinely fast attempt.
+    const questionCount =
+      test && Array.isArray(test.questions)
+        ? (test.questions as any[]).length
+        : 0;
+    const minRealisticSeconds = Math.max(60, questionCount * 3);
+
+    const rows = await db
+      .select({
+        userId: mockSubmissions.userId,
+        fullName: users.fullName,
+        netMarks: mockSubmissions.netMarks,
+        startedAt: mockSubmissions.startedAt,
+        submittedAt: mockSubmissions.submittedAt,
+      })
+      .from(mockSubmissions)
+      .innerJoin(users, eq(mockSubmissions.userId, users.id))
+      .where(
+        and(
+          eq(mockSubmissions.mockTestId, mockTestId),
+          eq(mockSubmissions.isSubmitted, true),
+        ),
+      );
+
+    const bestByUser = new Map<
+      number,
+      {
+        userId: number;
+        fullName: string;
+        netMarks: number;
+        durationSeconds: number;
+      }
+    >();
+    for (const row of rows) {
+      const net = row.netMarks ?? 0;
+      const duration = row.submittedAt
+        ? Math.max(
+            0,
+            (new Date(row.submittedAt).getTime() -
+              new Date(row.startedAt).getTime()) /
+              1000,
+          )
+        : Number.MAX_SAFE_INTEGER;
+
+      // An attempt that ran over the allotted time isn't a fair comparison
+      // against someone who finished within the limit, so it's excluded
+      // from leaderboard eligibility entirely rather than just ranked lower.
+      if (duration > allowedSeconds) continue;
+
+      // Same logic in reverse: a duration too short to be real (broken
+      // startedAt from before the timestamp fix) doesn't belong either.
+      if (duration < minRealisticSeconds) continue;
+
+      const existing = bestByUser.get(row.userId);
+      const isBetter =
+        !existing ||
+        net > existing.netMarks ||
+        (net === existing.netMarks && duration < existing.durationSeconds);
+      if (isBetter) {
+        bestByUser.set(row.userId, {
+          userId: row.userId,
+          fullName: row.fullName,
+          netMarks: net,
+          durationSeconds: duration,
+        });
+      }
+    }
+
+    return Array.from(bestByUser.values()).sort(
+      (a, b) =>
+        b.netMarks - a.netMarks || a.durationSeconds - b.durationSeconds,
+    );
   }
 
   async getSubmissionsByMockTestId(mockTestId: number): Promise<any[]> {
