@@ -62,6 +62,15 @@ function generateUsername(
   return `${groupLetter}${yearSuffix}${hscRoll}`;
 }
 
+function toDisplayName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "Student";
+  if (parts.length === 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0];
+  return `${first} ${lastInitial}.`;
+}
+
 function parseBDTime(dateStr: string): Date | null {
   if (!dateStr) return null;
   if (
@@ -487,6 +496,39 @@ export async function registerRoutes(
         }
       }
       res.json(test);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/mock-tests/:id/leaderboard", requireAuth, async (req, res) => {
+    try {
+      const mockTestId = parseInt(req.params.id);
+      const test = await storage.getMockTest(mockTestId);
+      if (!test)
+        return res.status(404).json({ message: "Mock test not found" });
+
+      const ranked = await storage.getMockTestLeaderboard(mockTestId);
+      const currentUserId = req.session.userId!;
+
+      const entries = ranked.map((r, i) => ({
+        rank: i + 1,
+        displayName: toDisplayName(r.fullName),
+        netMarks: r.netMarks,
+        durationSeconds: r.durationSeconds,
+        isYou: r.userId === currentUserId,
+      }));
+
+      const yourEntry = entries.find((e) => e.isYou) || null;
+
+      res.json({
+        totalParticipants: entries.length,
+        top: entries.slice(0, 20),
+        yourRank: yourEntry ? yourEntry.rank : null,
+        yourNeighbors: yourEntry
+          ? entries.slice(Math.max(0, yourEntry.rank - 2), yourEntry.rank + 1)
+          : [],
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
