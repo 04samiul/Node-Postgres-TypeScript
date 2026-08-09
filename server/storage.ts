@@ -91,6 +91,25 @@ export interface IStorage {
   createSubmission(data: InsertMockSubmission): Promise<MockSubmission>;
   getSubmission(id: number): Promise<MockSubmission | undefined>;
   getUserSubmissions(userId: number): Promise<MockSubmission[]>;
+  getStudentProgress(userId: number): Promise<{
+    subjectAverages: {
+      tag: string;
+      averagePercent: number;
+      attempts: number;
+    }[];
+    sectionStats: {
+      section: string;
+      correct: number;
+      wrong: number;
+      skipped: number;
+      total: number;
+      wrongRate: number;
+      skipRate: number;
+    }[];
+    weakestSection: string | null;
+    mostSkippedSection: string | null;
+    testsCompleted: number;
+  }>;
   getSubmissionsByMockTestId(mockTestId: number): Promise<any[]>;
   getMockTestLeaderboard(
     mockTestId: number,
@@ -602,6 +621,178 @@ export class DatabaseStorage implements IStorage {
       .from(mockSubmissions)
       .where(eq(mockSubmissions.userId, userId))
       .orderBy(desc(mockSubmissions.startedAt));
+  }
+
+  async getStudentProgress(userId: number): Promise<{
+    subjectAverages: {
+      tag: string;
+      averagePercent: number;
+      attempts: number;
+    }[];
+    sectionStats: {
+      section: string;
+      correct: number;
+      wrong: number;
+      skipped: number;
+      total: number;
+      wrongRate: number;
+      skipRate: number;
+    }[];
+    weakestSection: string | null;
+    mostSkippedSection: string | null;
+    testsCompleted: number;
+  }> {
+    const submissions = await db
+      .select()
+      .from(mockSubmissions)
+      .where(
+        and(
+          eq(mockSubmissions.userId, userId),
+          eq(mockSubmissions.isSubmitted, true),
+        ),
+      );
+
+    if (submissions.length === 0) {
+      return {
+        subjectAverages: [],
+        sectionStats: [],
+        weakestSection: null,
+        mostSkippedSection: null,
+        testsCompleted: 0,
+      };
+    }
+
+    const testIds = Array.from(new Set(submissions.map((s) => s.mockTestId)));
+    const tests = await db
+      .select()
+      .from(mockTests)
+      .where(sql`${mockTests.id} IN (${sql.join(testIds, sql`, `)})`);
+    const testById = new Map(tests.map((t) => [t.id, t]));
+
+    // Best (highest net marks) attempt per test, for subject-average scoring.
+    // Every completed attempt still counts toward section-level stats below,
+    // since a wrong answer on attempt 1 is a real gap even if attempt 2 fixed it.
+    const bestByTest = new Map<number, (typeof submissions)[number]>();
+    for (const s of submissions) {
+      const existing = bestByTest.get(s.mockTestId);
+      if (!existing || (s.netMarks ?? 0) > (existing.netMarks ?? 0)) {
+        bestByTest.set(s.mockTestId, s);
+      }
+    }
+
+    // Mirrors the exact marking rules used at submit time in routes.ts.
+    // Max possible marks per section is questions-in-that-section times the
+    // correct-answer value, NOT 1 point per question, EngP/AS/PS award 2
+    // points correct, EngO awards 1, so this has to match precisely or the
+    // percentages shown here would silently drift from real scores.
+    const MARK_VALUE: Record<string, number> = {
+      EngP: 2,
+      EngO: 1,
+      AS: 2,
+      PS: 2,
+    };
+
+    const subjectTotals = new Map<
+      string,
+      { sumPercent: number; attempts: number }
+    >();
+    for (const [testId, sub] of Array.from(bestByTest.entries())) {
+      const test = testById.get(testId);
+      if (!test) continue;
+      const questions = Array.isArray(test.questions)
+        ? (test.questions as any[])
+        : [];
+      if (questions.length === 0) continue;
+      const maxPossible = questions.reduce(
+        (sum, q) => sum + (MARK_VALUE[q.section] ?? 1),
+        0,
+      );
+      const percent =
+        maxPossible > 0
+          ? Math.max(0, ((sub.netMarks ?? 0) / maxPossible) * 100)
+          : 0;
+      const entry = subjectTotals.get(test.tag) || {
+        sumPercent: 0,
+        attempts: 0,
+      };
+      entry.sumPercent += percent;
+      entry.attempts += 1;
+      subjectTotals.set(test.tag, entry);
+    }
+
+    const subjectAverages = Array.from(subjectTotals.entries()).map(
+      ([tag, v]) => ({
+        tag,
+        averagePercent: Math.round(v.sumPercent / v.attempts),
+        attempts: v.attempts,
+      }),
+    );
+
+    const sectionTotals = new Map<
+      string,
+      { correct: number; wrong: number; skipped: number }
+    >();
+    for (const sub of submissions) {
+      const test = testById.get(sub.mockTestId);
+      if (!test) continue;
+      const questions = Array.isArray(test.questions)
+        ? (test.questions as any[])
+        : [];
+      const answers = (sub.answers || {}) as Record<string, number>;
+      for (const q of questions) {
+        const section = q.section || test.tag;
+        const entry = sectionTotals.get(section) || {
+          correct: 0,
+          wrong: 0,
+          skipped: 0,
+        };
+        const given = answers[String(q.id)];
+        if (given === undefined || given === null || given === -1)
+          entry.skipped += 1;
+        else if (given === q.correctAnswer) entry.correct += 1;
+        else entry.wrong += 1;
+        sectionTotals.set(section, entry);
+      }
+    }
+
+    const MIN_QUESTIONS_FOR_SIGNAL = 5;
+    const sectionStats = Array.from(sectionTotals.entries()).map(
+      ([section, v]) => {
+        const total = v.correct + v.wrong + v.skipped;
+        return {
+          section,
+          correct: v.correct,
+          wrong: v.wrong,
+          skipped: v.skipped,
+          total,
+          wrongRate: total > 0 ? v.wrong / total : 0,
+          skipRate: total > 0 ? v.skipped / total : 0,
+        };
+      },
+    );
+
+    const eligibleForWeakest = sectionStats.filter(
+      (s) => s.total >= MIN_QUESTIONS_FOR_SIGNAL,
+    );
+    const weakestSection =
+      eligibleForWeakest.length > 0
+        ? eligibleForWeakest.reduce((a, b) =>
+            b.wrongRate > a.wrongRate ? b : a,
+          ).section
+        : null;
+    const mostSkippedSection =
+      eligibleForWeakest.length > 0
+        ? eligibleForWeakest.reduce((a, b) => (b.skipRate > a.skipRate ? b : a))
+            .section
+        : null;
+
+    return {
+      subjectAverages,
+      sectionStats,
+      weakestSection,
+      mostSkippedSection,
+      testsCompleted: bestByTest.size,
+    };
   }
 
   async getMockTestLeaderboard(mockTestId: number): Promise<

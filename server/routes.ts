@@ -534,6 +534,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/my-progress", requireAuth, async (req, res) => {
+    try {
+      const progress = await storage.getStudentProgress(req.session.userId!);
+      res.json(progress);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/my-submissions", requireAuth, async (req, res) => {
     const submissions = await storage.getUserSubmissions(req.session.userId!);
     const allTests = await storage.getAllMockTests();

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { BookOpen, FileText, Play, Calendar, User, Award, Clock, Eye, EyeOff, Crown, Pencil, X, Save, Loader2, KeyRound } from "lucide-react";
+import { BookOpen, FileText, Play, Calendar, User, Award, Clock, Eye, EyeOff, Crown, Pencil, X, Save, Loader2, KeyRound, TrendingUp, TrendingDown, SkipForward, Target } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -71,6 +71,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          <ProgressCard />
           <ProfileCard user={user} />
           <ChangePasswordCard />
           <RecentSubmissions userId={user.id} />
@@ -81,6 +82,99 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+interface StudentProgress {
+  subjectAverages: { tag: string; averagePercent: number; attempts: number }[];
+  sectionStats: { section: string; correct: number; wrong: number; skipped: number; total: number; wrongRate: number; skipRate: number }[];
+  weakestSection: string | null;
+  mostSkippedSection: string | null;
+  testsCompleted: number;
+}
+
+const SECTION_LABELS: Record<string, string> = {
+  EngP: "English (Passage)",
+  EngO: "English (Grammar/Other)",
+  AS: "Analytical Skill",
+  PS: "Problem Solving",
+};
+
+function ProgressCard() {
+  const { data: progress, isLoading } = useQuery<StudentProgress>({ queryKey: ["/api/my-progress"] });
+
+  if (isLoading) {
+    return (
+      <Card data-testid="card-progress">
+        <CardHeader><CardTitle className="text-base">Your Progress</CardTitle></CardHeader>
+        <CardContent><Skeleton className="h-32 w-full" /></CardContent>
+      </Card>
+    );
+  }
+
+  if (!progress || progress.testsCompleted === 0) {
+    return (
+      <Card data-testid="card-progress">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Target className="h-4 w-4" /> Your Progress</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Complete a mock test to see your subject-wise performance and where to focus next.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card data-testid="card-progress">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2"><Target className="h-4 w-4" /> Your Progress</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-2">Average Score by Subject</p>
+          <div className="space-y-2">
+            {progress.subjectAverages.map((s) => (
+              <div key={s.tag} data-testid={`progress-subject-${s.tag.replace(/\s+/g, "-").toLowerCase()}`}>
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span>{s.tag}</span>
+                  <span className="text-muted-foreground">{s.averagePercent}% <span className="text-xs">({s.attempts} test{s.attempts !== 1 ? "s" : ""})</span></span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${s.averagePercent >= 70 ? "bg-green-600" : s.averagePercent >= 40 ? "bg-amber-500" : "bg-destructive"}`}
+                    style={{ width: `${Math.min(100, Math.max(0, s.averagePercent))}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {progress.weakestSection && (
+            <div className="flex items-start gap-2 p-3 rounded-md border bg-destructive/5" data-testid="progress-weakest-section">
+              <TrendingDown className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-muted-foreground">Weakest Topic</p>
+                <p className="text-sm font-medium">{SECTION_LABELS[progress.weakestSection] || progress.weakestSection}</p>
+              </div>
+            </div>
+          )}
+          {progress.mostSkippedSection && (
+            <div className="flex items-start gap-2 p-3 rounded-md border bg-amber-500/5" data-testid="progress-most-skipped">
+              <SkipForward className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-muted-foreground">Most Skipped</p>
+                <p className="text-sm font-medium">{SECTION_LABELS[progress.mostSkippedSection] || progress.mostSkippedSection}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!progress.weakestSection && (
+          <p className="text-xs text-muted-foreground">Take a few more mock tests to unlock your weak-topic insights.</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
