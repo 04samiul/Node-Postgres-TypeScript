@@ -33,7 +33,7 @@ import {
   siteSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, and, or, sql, lte } from "drizzle-orm";
+import { eq, desc, count, and, or, sql, lte, gte } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -890,6 +890,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStats(): Promise<Record<string, number>> {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
     const [
       [userCount],
       [courseCount],
@@ -897,6 +899,10 @@ export class DatabaseStorage implements IStorage {
       [classCount],
       [resourceCount],
       [noticeCount],
+      [newUsersThisWeek],
+      [newEnrollmentsThisWeek],
+      [mockAttemptsThisWeek],
+      [mockPassesThisWeek],
     ] = await Promise.all([
       db.select({ count: count() }).from(users),
       db.select({ count: count() }).from(courses),
@@ -904,7 +910,41 @@ export class DatabaseStorage implements IStorage {
       db.select({ count: count() }).from(classes),
       db.select({ count: count() }).from(resources),
       db.select({ count: count() }).from(notices),
+      db
+        .select({ count: count() })
+        .from(users)
+        .where(gte(users.createdAt, weekAgo)),
+      db
+        .select({ count: count() })
+        .from(enrollments)
+        .where(gte(enrollments.createdAt, weekAgo)),
+      db
+        .select({ count: count() })
+        .from(mockSubmissions)
+        .where(
+          and(
+            eq(mockSubmissions.isSubmitted, true),
+            gte(mockSubmissions.submittedAt, weekAgo),
+          ),
+        ),
+      db
+        .select({ count: count() })
+        .from(mockSubmissions)
+        .where(
+          and(
+            eq(mockSubmissions.isSubmitted, true),
+            eq(mockSubmissions.passed, true),
+            gte(mockSubmissions.submittedAt, weekAgo),
+          ),
+        ),
     ]);
+
+    const attempts = mockAttemptsThisWeek.count;
+    const passRateThisWeek =
+      attempts > 0
+        ? Math.round((mockPassesThisWeek.count / attempts) * 100)
+        : null;
+
     return {
       users: userCount.count,
       courses: courseCount.count,
@@ -912,6 +952,10 @@ export class DatabaseStorage implements IStorage {
       classes: classCount.count,
       resources: resourceCount.count,
       notices: noticeCount.count,
+      newUsersThisWeek: newUsersThisWeek.count,
+      newEnrollmentsThisWeek: newEnrollmentsThisWeek.count,
+      mockAttemptsThisWeek: attempts,
+      passRateThisWeek: passRateThisWeek ?? -1,
     };
   }
 }
