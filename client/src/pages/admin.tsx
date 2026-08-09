@@ -234,26 +234,102 @@ function OverviewTab() {
     { label: "Notices", value: stats?.notices ?? 0, icon: Bell },
   ];
 
+  const weeklyCards = [
+    {
+      label: "New Users",
+      value: stats?.newUsersThisWeek ?? 0,
+      icon: UserPlus,
+      suffix: "",
+    },
+    {
+      label: "New Enrollments",
+      value: stats?.newEnrollmentsThisWeek ?? 0,
+      icon: CheckCheck,
+      suffix: "",
+    },
+    {
+      label: "Mock Tests Taken",
+      value: stats?.mockAttemptsThisWeek ?? 0,
+      icon: ClipboardList,
+      suffix: "",
+    },
+    {
+      label: "Pass Rate",
+      value:
+        stats?.passRateThisWeek === -1 || stats?.passRateThisWeek === undefined
+          ? "-"
+          : stats.passRateThisWeek,
+      icon: CheckCircle,
+      suffix:
+        stats?.passRateThisWeek === -1 || stats?.passRateThisWeek === undefined
+          ? ""
+          : "%",
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {cards.map((card) => (
-        <Card key={card.label}>
-          <CardContent className="pt-6 text-center">
-            <card.icon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p
-              className="text-2xl font-bold"
-              data-testid={`stat-${card.label.toLowerCase()}`}
-            >
-              {isLoading ? (
-                <Skeleton className="h-8 w-12 mx-auto" />
-              ) : (
-                card.value
-              )}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">{card.label}</p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground mb-2">
+          Last 7 Days
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {weeklyCards.map((card) => (
+            <Card key={card.label}>
+              <CardContent className="pt-6 text-center">
+                <card.icon className="h-8 w-8 mx-auto text-primary mb-2" />
+                <p
+                  className="text-2xl font-bold"
+                  data-testid={`stat-weekly-${card.label.replace(/\s+/g, "-").toLowerCase()}`}
+                >
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-12 mx-auto" />
+                  ) : (
+                    `${card.value}${card.suffix}`
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {card.label}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        {!isLoading && stats?.passRateThisWeek === -1 && (
+          <p className="text-xs text-muted-foreground mt-2">
+            No mock test attempts in the last 7 days yet, pass rate will show
+            once someone submits one.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground mb-2">
+          All Time
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {cards.map((card) => (
+            <Card key={card.label}>
+              <CardContent className="pt-6 text-center">
+                <card.icon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p
+                  className="text-2xl font-bold"
+                  data-testid={`stat-${card.label.toLowerCase()}`}
+                >
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-12 mx-auto" />
+                  ) : (
+                    card.value
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {card.label}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
