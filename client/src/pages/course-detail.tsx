@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import {
@@ -104,6 +104,8 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
+  const classesAndMocksRef = useRef<HTMLDivElement>(null);
+  const resourcesRef = useRef<HTMLDivElement>(null);
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
   const [classSortOrder, setClassSortOrder] = useState<
     "default" | "newest" | "oldest"
@@ -377,6 +379,44 @@ export default function CourseDetailPage() {
 
       {totalContent > 0 ? (
         <div>
+          <div
+            className="sticky top-14 z-40 -mx-4 px-4 py-2 mb-4 bg-background/95 backdrop-blur border-b flex items-center gap-2 overflow-x-auto"
+            data-testid="quick-jump-nav"
+          >
+            {(classItems.length > 0 || mockItems.length > 0) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="shrink-0 h-8 text-xs"
+                onClick={() =>
+                  classesAndMocksRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  })
+                }
+                data-testid="button-jump-classes"
+              >
+                <Video className="h-3.5 w-3.5 mr-1" /> Classes & Mocks
+              </Button>
+            )}
+            {resourceItems.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="shrink-0 h-8 text-xs"
+                onClick={() =>
+                  resourcesRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  })
+                }
+                data-testid="button-jump-resources"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1" /> Resources
+              </Button>
+            )}
+          </div>
+
           {(() => {
             const currentClasses = sortClasses(
               activeSubject === "General"
@@ -389,7 +429,7 @@ export default function CourseDetailPage() {
                 : mockItems.filter((m) => m.tag === activeSubject);
 
             return (
-              <>
+              <div ref={classesAndMocksRef} className="scroll-mt-28">
                 <div
                   className="flex flex-wrap gap-2 mb-6"
                   data-testid="subject-filter-buttons"
@@ -436,7 +476,9 @@ export default function CourseDetailPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="default">Default</SelectItem>
+                            <SelectItem value="default">
+                              Default Order
+                            </SelectItem>
                             <SelectItem value="oldest">Oldest First</SelectItem>
                             <SelectItem value="newest">Newest First</SelectItem>
                           </SelectContent>
@@ -479,12 +521,16 @@ export default function CourseDetailPage() {
                     />
                   )}
                 </div>
-              </>
+              </div>
             );
           })()}
 
           {resourceItems.length > 0 && (
-            <div className="mt-10" data-testid="section-resources">
+            <div
+              className="mt-10 scroll-mt-28"
+              ref={resourcesRef}
+              data-testid="section-resources"
+            >
               <h2 className="text-xl font-bold mb-4 pb-2 border-b">
                 Resources
               </h2>
